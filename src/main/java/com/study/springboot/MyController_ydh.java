@@ -1269,153 +1269,153 @@ public class MyController_ydh {
 		
 	}
 	
-	// ********************************************
-	// *               주문목록                   *
-	// ********************************************
-	@RequestMapping("/order_list")
-	public String order_list( RedirectAttributes redirect,HttpServletRequest request ) throws Exception {
-		
-		System.out.println("  line: " + new Throwable().getStackTrace()[0].getLineNumber() + " [MyController_ydh] order_list");
-		String uid = (String) request.getSession().getAttribute("user_id");
-		
-		if(uid==null) {
-			return "member/order/need_login";
-		}else {
-			redirect.addAttribute("page", "1");
-			
-			return "redirect:order_list2";
-		}
-		
-	}
-	
-	// ********************************************
-	// *        주문목록 페이징 조회              *
-	// ********************************************
-	@RequestMapping("/order_list2")
-	public String order_list2(RedirectAttributes redirect,
-							  HttpServletRequest request, Model model,
-							  @RequestParam(value="start_date", required=false) String start_date,
-							  @RequestParam(value="end_date", required=false) String end_date) throws ParseException {
-		
-		System.out.println("  line: " + new Throwable().getStackTrace()[0].getLineNumber() + " [MyController_ydh] order_list2");
-		
-		String uid = (String) request.getSession().getAttribute("user_id");
-		
-		int result = order_infoDao.count(uid);
-		
-		System.out.println("result:"+result);
-		
-		if(order_infoDao.count(uid)%10==0) {
-			model.addAttribute("count",(order_infoDao.count(uid)/10));
-		}else {
-			model.addAttribute("count",(order_infoDao.count(uid)/10)+1);
-		}
-		if(order_infoDao.count(uid)>=10) {
-			model.addAttribute("count2",10);
-		}else {
-			model.addAttribute("count2",order_infoDao.count(uid));
-		}
-		
-		model.addAttribute("startdate","");
-		model.addAttribute("enddate","");
-		model.addAttribute("dto3", member_InfoDao.change(uid));
-		model.addAttribute("order_status1",order_infoDao.order_status1(uid));
-		model.addAttribute("order_status2",order_infoDao.order_status2(uid));
-		model.addAttribute("order_status3",order_infoDao.order_status3(uid));
-		model.addAttribute("order_status4",order_infoDao.order_status4(uid));
-		model.addAttribute("order_status5",order_infoDao.order_status5(uid));
-		model.addAttribute("order_status6",order_infoDao.order_status6(uid));
-		model.addAttribute("order_status6",order_infoDao.order_status6(uid));
-		
-		System.out.println(uid);
-		
-		redirect.addAttribute("page", "1");
-		
-		String page = request.getParameter("page");
-		System.out.println( "page:" + page);
-		model.addAttribute("page", page);
-		
-		int num_page_no = Integer.parseInt( page ); //page번호 1,2,3,4
-		int num_page_size = 10; //한페이지당 Row갯수
-		int startRowNum = (num_page_no - 1) * num_page_size + 1; // 1, 6, 11 페이지 시작 줄번호
-		int endRowNum = (num_page_no * num_page_size); //5, 10, 15 페이지 끝 줄번호
-		
-		System.out.println("startRowNum:"+startRowNum);
-		System.out.println("endRowNum:"+endRowNum);
-		
-		model.addAttribute("list", order_info_dao_product_infodao.listPageDao2(String.valueOf(startRowNum), String.valueOf(endRowNum),uid));  //최상위 10개
-		System.out.println("list:"+order_info_dao_product_infodao.listPageDao2(String.valueOf(startRowNum), String.valueOf(endRowNum),uid));
-	
-		model.addAttribute("mainPage", "member/mypage/mypage_order.jsp");
-		return "index"; //list.jsp 호출하면서 "list"객체를 넘겨줌.
-		
-	}
-	
-	// ********************************************
-	// *           주문목록   - 날짜검색          *
-	// ********************************************
-	@RequestMapping("order_list_search")
-	public String order_list_search(@RequestParam("page") String page,
-									@RequestParam("start_date") String start_date,
-									@RequestParam("end_date") String end_date,
-									RedirectAttributes redirect,
-									Model model,
-									HttpServletRequest request) throws ParseException {
-		
-		System.out.println("  line: " + new Throwable().getStackTrace()[0].getLineNumber() + " [MyController_ydh] order_list_search");
-		
-		String sd = start_date;
-
-		SimpleDateFormat transFormat1 = new SimpleDateFormat("yyyy-MM-dd");
-
-		Date sdd = transFormat1.parse(sd);
-		
-		String ed = end_date;
-
-		SimpleDateFormat transFormat2 = new SimpleDateFormat("yyyy-MM-dd");
-
-		Date edd = transFormat2.parse(ed);
-
-		model.addAttribute("startdate",start_date);
-		model.addAttribute("enddate",end_date);
-		
-		System.out.println( "page:" + page);
-		model.addAttribute("page", page);
-		
-		String uid = (String) request.getSession().getAttribute("user_id");
-		
-		if(order_infoDao.count(uid)%10==0) {
-			model.addAttribute("count",(order_infoDao.count_date(uid,sdd,edd)/10));
-		}else {
-			model.addAttribute("count",(order_infoDao.count_date(uid,sdd,edd)/10)+1);
-		}
-		
-		model.addAttribute("count2",order_infoDao.count_date(uid,sdd,edd));
-		model.addAttribute("dto3", member_InfoDao.change(uid));
-		model.addAttribute("order_status1",order_infoDao.order_status1(uid));
-		model.addAttribute("order_status2",order_infoDao.order_status2(uid));
-		model.addAttribute("order_status3",order_infoDao.order_status3(uid));
-		model.addAttribute("order_status4",order_infoDao.order_status4(uid));
-		model.addAttribute("order_status5",order_infoDao.order_status5(uid));
-		model.addAttribute("order_status6",order_infoDao.order_status6(uid));
-		System.out.println(uid);
-		
-		
-		int num_page_no = Integer.parseInt( page ); //page번호 1,2,3,4
-		int num_page_size = 10; //한페이지당 Row갯수
-		int startRowNum = (num_page_no - 1) * num_page_size + 1; // 1, 6, 11 페이지 시작 줄번호
-		int endRowNum = (num_page_no * num_page_size); //5, 10, 15 페이지 끝 줄번호
-		
-		System.out.println("startRowNum:"+startRowNum);
-		System.out.println("endRowNum:"+endRowNum);
-		
-		model.addAttribute("list", order_info_dao_product_infodao.listPageDao(String.valueOf(startRowNum), String.valueOf(endRowNum),uid,sdd,edd));  //최상위 10개
-		System.out.println("list:"+order_info_dao_product_infodao.listPageDao(String.valueOf(startRowNum), String.valueOf(endRowNum),uid,sdd,edd));
-		
-		model.addAttribute("mainPage", "member/mypage/mypage_order.jsp");
-		return "index"; //list.jsp 호출하면서 "list"객체를 넘겨줌.
-		
-	}
+//	// ********************************************
+//	// *               주문목록                   *
+//	// ********************************************
+//	@RequestMapping("/order_list")
+//	public String order_list( RedirectAttributes redirect,HttpServletRequest request ) throws Exception {
+//		
+//		System.out.println("  line: " + new Throwable().getStackTrace()[0].getLineNumber() + " [MyController_ydh] order_list");
+//		String uid = (String) request.getSession().getAttribute("user_id");
+//		
+//		if(uid==null) {
+//			return "member/order/need_login";
+//		}else {
+//			redirect.addAttribute("page", "1");
+//			
+//			return "redirect:order_list2";
+//		}
+//		
+//	}
+//	
+//	// ********************************************
+//	// *        주문목록 페이징 조회              *
+//	// ********************************************
+//	@RequestMapping("/order_list2")
+//	public String order_list2(RedirectAttributes redirect,
+//							  HttpServletRequest request, Model model,
+//							  @RequestParam(value="start_date", required=false) String start_date,
+//							  @RequestParam(value="end_date", required=false) String end_date) throws ParseException {
+//		
+//		System.out.println("  line: " + new Throwable().getStackTrace()[0].getLineNumber() + " [MyController_ydh] order_list2");
+//		
+//		String uid = (String) request.getSession().getAttribute("user_id");
+//		
+//		int result = order_infoDao.count(uid);
+//		
+//		System.out.println("result:"+result);
+//		
+//		if(order_infoDao.count(uid)%10==0) {
+//			model.addAttribute("count",(order_infoDao.count(uid)/10));
+//		}else {
+//			model.addAttribute("count",(order_infoDao.count(uid)/10)+1);
+//		}
+//		if(order_infoDao.count(uid)>=10) {
+//			model.addAttribute("count2",10);
+//		}else {
+//			model.addAttribute("count2",order_infoDao.count(uid));
+//		}
+//		
+//		model.addAttribute("startdate","");
+//		model.addAttribute("enddate","");
+//		model.addAttribute("dto3", member_InfoDao.change(uid));
+//		model.addAttribute("order_status1",order_infoDao.order_status1(uid));
+//		model.addAttribute("order_status2",order_infoDao.order_status2(uid));
+//		model.addAttribute("order_status3",order_infoDao.order_status3(uid));
+//		model.addAttribute("order_status4",order_infoDao.order_status4(uid));
+//		model.addAttribute("order_status5",order_infoDao.order_status5(uid));
+//		model.addAttribute("order_status6",order_infoDao.order_status6(uid));
+//		model.addAttribute("order_status6",order_infoDao.order_status6(uid));
+//		
+//		System.out.println(uid);
+//		
+//		redirect.addAttribute("page", "1");
+//		
+//		String page = request.getParameter("page");
+//		System.out.println( "page:" + page);
+//		model.addAttribute("page", page);
+//		
+//		int num_page_no = Integer.parseInt( page ); //page번호 1,2,3,4
+//		int num_page_size = 10; //한페이지당 Row갯수
+//		int startRowNum = (num_page_no - 1) * num_page_size + 1; // 1, 6, 11 페이지 시작 줄번호
+//		int endRowNum = (num_page_no * num_page_size); //5, 10, 15 페이지 끝 줄번호
+//		
+//		System.out.println("startRowNum:"+startRowNum);
+//		System.out.println("endRowNum:"+endRowNum);
+//		
+//		model.addAttribute("list", order_info_dao_product_infodao.listPageDao2(String.valueOf(startRowNum), String.valueOf(endRowNum),uid));  //최상위 10개
+//		System.out.println("list:"+order_info_dao_product_infodao.listPageDao2(String.valueOf(startRowNum), String.valueOf(endRowNum),uid));
+//	
+//		model.addAttribute("mainPage", "member/mypage/mypage_order.jsp");
+//		return "index"; //list.jsp 호출하면서 "list"객체를 넘겨줌.
+//		
+//	}
+//	
+//	// ********************************************
+//	// *           주문목록   - 날짜검색          *
+//	// ********************************************
+//	@RequestMapping("order_list_search")
+//	public String order_list_search(@RequestParam("page") String page,
+//									@RequestParam("start_date") String start_date,
+//									@RequestParam("end_date") String end_date,
+//									RedirectAttributes redirect,
+//									Model model,
+//									HttpServletRequest request) throws ParseException {
+//		
+//		System.out.println("  line: " + new Throwable().getStackTrace()[0].getLineNumber() + " [MyController_ydh] order_list_search");
+//		
+//		String sd = start_date;
+//
+//		SimpleDateFormat transFormat1 = new SimpleDateFormat("yyyy-MM-dd");
+//
+//		Date sdd = transFormat1.parse(sd);
+//		
+//		String ed = end_date;
+//
+//		SimpleDateFormat transFormat2 = new SimpleDateFormat("yyyy-MM-dd");
+//
+//		Date edd = transFormat2.parse(ed);
+//
+//		model.addAttribute("startdate",start_date);
+//		model.addAttribute("enddate",end_date);
+//		
+//		System.out.println( "page:" + page);
+//		model.addAttribute("page", page);
+//		
+//		String uid = (String) request.getSession().getAttribute("user_id");
+//		
+//		if(order_infoDao.count(uid)%10==0) {
+//			model.addAttribute("count",(order_infoDao.count_date(uid,sdd,edd)/10));
+//		}else {
+//			model.addAttribute("count",(order_infoDao.count_date(uid,sdd,edd)/10)+1);
+//		}
+//		
+//		model.addAttribute("count2",order_infoDao.count_date(uid,sdd,edd));
+//		model.addAttribute("dto3", member_InfoDao.change(uid));
+//		model.addAttribute("order_status1",order_infoDao.order_status1(uid));
+//		model.addAttribute("order_status2",order_infoDao.order_status2(uid));
+//		model.addAttribute("order_status3",order_infoDao.order_status3(uid));
+//		model.addAttribute("order_status4",order_infoDao.order_status4(uid));
+//		model.addAttribute("order_status5",order_infoDao.order_status5(uid));
+//		model.addAttribute("order_status6",order_infoDao.order_status6(uid));
+//		System.out.println(uid);
+//		
+//		
+//		int num_page_no = Integer.parseInt( page ); //page번호 1,2,3,4
+//		int num_page_size = 10; //한페이지당 Row갯수
+//		int startRowNum = (num_page_no - 1) * num_page_size + 1; // 1, 6, 11 페이지 시작 줄번호
+//		int endRowNum = (num_page_no * num_page_size); //5, 10, 15 페이지 끝 줄번호
+//		
+//		System.out.println("startRowNum:"+startRowNum);
+//		System.out.println("endRowNum:"+endRowNum);
+//		
+//		model.addAttribute("list", order_info_dao_product_infodao.listPageDao(String.valueOf(startRowNum), String.valueOf(endRowNum),uid,sdd,edd));  //최상위 10개
+//		System.out.println("list:"+order_info_dao_product_infodao.listPageDao(String.valueOf(startRowNum), String.valueOf(endRowNum),uid,sdd,edd));
+//		
+//		model.addAttribute("mainPage", "member/mypage/mypage_order.jsp");
+//		return "index"; //list.jsp 호출하면서 "list"객체를 넘겨줌.
+//		
+//	}
 	
 	// ********************************************
 	// *            주문목록 - 상세보기팝업       *
