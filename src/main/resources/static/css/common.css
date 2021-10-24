@@ -1,0 +1,186 @@
+@charset "UTF-8";
+/* @import url('https://cdn.rawgit.com/moonspam/NanumSquare/master/nanumsquare.css'); */
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100;300;400;500;700;900&display=swap");
+
+/***************************************************************************/
+/*                                초기화                                   */
+/***************************************************************************/
+body {
+  width: 100%;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  font-family: "Noto Sans KR", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: #333;
+}
+
+a {
+  text-decoration: none;
+  color: #828282;
+}
+
+a:link {
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: none;
+  color: #828282;
+  cursor: pointer;
+}
+
+ul {
+  list-style: none;
+}
+
+input:focus {
+  outline: unset;
+}
+
+select:focus {
+  outline: none;
+}
+
+button:focus {
+  outline: none;
+}
+
+.wrap {
+  max-width: 1920px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.current {
+  font-weight: bold;
+  color: #fe4f79;
+}
+
+/***************************************************************************/
+/*                                 main                                    */
+/***************************************************************************/
+#container {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/***************************    page_title    ****************************/
+.page_title {
+  width: 100%;
+  padding-top: 60px;
+}
+
+.page_title h2 {
+  padding: 40px;
+  font-size: 1.75rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+.page_title .breadcrumb {
+  display: flex;
+  justify-content: flex-end;
+  background-color: #fff;
+  margin-bottom: 0;
+  padding: 0;
+  font-size: 14px;
+  color: #828282;
+}
+
+.location_content {
+  display: flex;
+  justify-content: flex-end;
+  padding: 20px;
+}
+
+.location_arrow {
+  width: 28px;
+  height: 28px;
+  text-align: center;
+  background-color: #fff;
+  font-size: 10px;
+  line-height: 19px;
+  color: #828282;
+}
+
+.page_title .line {
+  width: 100%;
+  border-bottom: 2px solid #fe4f79;
+}
+
+/******************************    input    ****************************/
+
+input:focus {
+  border: 1px solid #666;
+}
+
+input:hover {
+  border: 1px solid #666;
+}
+
+input[type="text"] {
+  border-radius: 4px;
+}
+
+
+input[type="password"] {
+  font-family: "Courier New", Courier, monospace;
+}
+
+input[type="password"]::placeholder {
+  font-family: "Noto Sans KR", sans-serif;
+}
+
+input[type="button"] {
+  outline: none;
+}
+
+input[type="submit"] {
+  cursor: pointer;
+}
+
+button[type="button"] {
+  outline: none;
+}
+
+button:hover {
+  cursor: pointer;
+}
+
+/******************************    button    ****************************/
+
+.finish_button {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.finish_button .btn {
+  width: 160px;
+  height: 48px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+  background-color: #fe4f79;
+  /* background-color: #12BAC4; */
+  border-radius: 4px;
+  border: 0;
+}
+
+.finish_button .btn:hover {
+  border: 1px solid #fe4f79;
+  color: #fe4f79;
+  background-color: #fff;
+}
+
+/******************************    banner    ****************************/
+
+.banner {
+  width: 100%;
+}
+
+.banner img {
+  width: 100%;
+}

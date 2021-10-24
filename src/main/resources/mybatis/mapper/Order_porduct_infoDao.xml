@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 주문 상품 정보 order_product_info 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.IOrder_product_infoDao"> 
+
+	<!--*******************-->
+	<!--* 작업자 : 김남권 *-->
+	<!--*******************-->
+
+	<!-- 주문 상품 정보 INSERT -->
+	<insert id="add_order_product_info">
+		INSERT INTO order_product_info(item_no, 
+									   order_id, 
+									   product_code, 
+									   product_name, 
+									   parent_category, 
+									   child_category, 
+									   manufacturer, 
+									   product_price, 
+									   number_of_orders,
+									   shipping_cost)
+				VALUES(ORDER_PRODUCT_INFO_SEQ.NEXTVAL,
+					   #{order_id}, 
+					   #{product_code}, 
+					   #{product_name}, 
+					   #{parent_category}, 
+					   #{child_category}, 
+					   #{manufacturer}, 
+					   #{product_price},
+					   #{number_of_orders},
+					   #{shipping_cost})
+	</insert>
+
+
+	<!-- 주문 상품 정보 조회 -->
+	<select id="user_order_list" resultType="com.study.springboot.dto.Order_product_infoDto">
+		SELECT * 
+			FROM ORDER_PRODUCT_INFO
+			WHERE order_id = #{order_id}
+			ORDER BY product_code
+	</select>
+	
+	<!--*******************-->
+	<!--* 작업자 : 윤대호 *-->
+	<!--*******************-->
+	
+	<!-- 리뷰글 작성여부 플래그 -->
+	<update id="wrote_review_flag">
+		UPDATE order_product_info 
+			SET wrote_review_flag = 'Y' 
+			WHERE product_code = #{param1} and order_id =#{param2}
+	</update>
+	
+</mapper>

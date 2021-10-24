@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 리뷰 member_review AND review_image_info 조인 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.IReview_and_imageDao"> 
+	
+	<!--*******************-->
+	<!--* 작업자 : 김남권 *-->
+	<!--*******************-->
+	
+	<!-- 상품에 대한 리뷰 목록 조회 -->
+	<select id="product_review" resultType="com.study.springboot.dto.Review_and_imageDto">
+		    SELECT r.*, 
+			       NVL(i.image_file_name, 'logo_simple.png') AS "image_file_name" 
+			    FROM (
+			            SELECT ROW_NUMBER() OVER(ORDER BY post_no DESC) AS row_num,
+			                    post_no,
+			                    product_code,
+			                    user_id,
+			                    review_score,
+			                    post_date,
+			                    post_content
+			                FROM MEMBER_REVIEW 
+			                WHERE PRODUCT_CODE = #{product_code}
+			         ) r LEFT OUTER JOIN 
+			         (
+			            SELECT * 
+			                FROM (
+			                        SELECT post_no, 
+			                               image_file_name, 
+			                               ROW_NUMBER() OVER(PARTITION BY post_no ORDER BY post_no) AS RN 
+			                          FROM REVIEW_IMAGE_INFO
+			                     ) RI 
+			                WHERE RI.RN = 1
+			         ) i 
+			    on(r.post_no = i.post_no)
+			    WHERE row_num BETWEEN #{firstRecordIndex} AND #{lastRecordIndex}
+			    ORDER BY row_num ASC
+	</select>
+
+</mapper>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 상품 정보 product_info 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.IProduct_infoDao"> 
+	
+	<!--*******************-->
+	<!--* 작업자 : 김남권 *-->
+	<!--*******************-->
+	
+	<!-- 상품 단건 조회 -->	
+	<select id="product_info" resultType="com.study.springboot.dto.Product_infoDto"> 
+		SELECT * FROM PRODUCT_INFO WHERE PRODUCT_CODE = #{product_code}
+	</select>
+	
+	<!-- 상품 판매 개수 +1 UPDATE -->
+	<update id="update_number_of_sales">
+		UPDATE PRODUCT_INFO
+			SET number_of_sales = #{number_of_sales}
+			WHERE product_code = #{product_code}
+	</update>
+
+	<!-- 마지막 추가 상품코드 조회 -->	
+	<select id="get_last_productCode" resultType="String"> 
+		SELECT pi.product_code 
+			FROM (
+				    SELECT product_code
+				 	  FROM product_info
+				 	  ORDER BY product_code DESC
+				 ) pi
+			WHERE ROWNUM = 1
+	</select>
+	
+</mapper>

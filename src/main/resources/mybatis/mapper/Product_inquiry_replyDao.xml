@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 상품 문의 답변 글 product_inquiry_reply 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.IProduct_inquiry_replyDao"> 
+
+	<!--*******************-->
+	<!--* 작업자 : 윤대호 *-->
+	<!--*******************-->
+	
+	<!-- 상품문의 상세보기  -->
+	<select id="content" resultType="com.study.springboot.dto.Product_inquiry_replyDto">
+		SELECT * FROM product_inquiry_reply WHERE inquiry_no = #{param1}
+    </select>
+    
+</mapper>

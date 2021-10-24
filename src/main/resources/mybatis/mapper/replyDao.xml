@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.study.springboot.dao.IReplyDao"> 
+
+    <!--##############################-->
+    <!--#                            #-->
+    <!--#         작업자: 심준엽     #-->
+    <!--#                            #-->
+    <!--##############################-->
+     
+     <!-- ########## 레코드 수 ########## --> 
+     <select id="countRecords" resultType="int">
+        SELECT count( reply_no ) 
+            FROM ${ table_name }
+            WHERE inquiry_no = #{ inquiry_no }
+    </select>
+     
+    <!-- ########## 목록 생성 ########## -->
+    <select id="relationInstance" resultType="com.study.springboot.dto.ReplyDto">
+        SELECT *
+            FROM (
+	            SELECT ROW_NUMBER() OVER(ORDER by reply_no ASC) AS
+	                row_num, reply_no, inquiry_no, user_id, reply_content, reply_date
+	            FROM ${ table_name }
+	            WHERE inquiry_no = #{ inquiry_no }
+            )
+            WHERE row_num = 1
+    </select>
+     
+    <!-- ########## 답글 업로드 ########## -->    
+    <insert id="insertRecord">
+        INSERT INTO ${ table_name } ( reply_no, inquiry_no, user_id, reply_content ) 
+          VALUES( ${ table_name }_seq.NEXTVAL, #{ inquiry_no }, #{ user_id }, #{ reply_content } )
+    </insert>
+    
+    <!-- ########## 답글 삭제 ########## -->    
+    <delete id="deleteRecord">
+        DELETE FROM ${ table_name }
+          WHERE reply_no = #{ reply_no }
+    </delete>
+    
+</mapper>

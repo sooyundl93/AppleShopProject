@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.study.springboot.dao.IProductInfoDao"> 
+
+	  <!--##############################-->
+	  <!--#                            #-->
+	  <!--#         작업자: 심준엽     #-->
+	  <!--#                            #-->
+	  <!--##############################-->
+  
+    <!-- ########## 상품 목록 생성 ########## -->
+    <select id="relationInstance" resultType="com.study.springboot.dto.ProductInfoDto">
+        SELECT *
+	        FROM (
+		        SELECT ROW_NUMBER() OVER(ORDER by ${sortRecords}, product_code DESC) AS
+		            row_num, parent_category, child_category, 
+		            product_code, product_name, product_price, number_of_stock, added_date
+		        FROM product_info
+		        <include refid="search" />
+		        <include refid="category" />
+	        )
+	        WHERE row_num BETWEEN #{firstRecordIndex} AND #{lastRecordIndex}
+    </select>
+    
+    <!-- ########## 상품의 레코드 수 카운트 ########## -->
+    <select id="countRecords" resultType="int">
+        SELECT count(product_code) 
+            FROM product_info
+        <include refid="search" />
+        <include refid="category" />
+    </select>
+ 
+ 	  <!-- ########## 검색 및 페이징 옵션 ########## -->
+    <sql id="search">
+        <choose>
+            <when test="search_option == 'all' ">
+                WHERE (
+                    LOWER( product_code ) LIKE '%' || #{search_keyword} || '%' OR
+                    LOWER( product_name ) LIKE '%' || #{search_keyword} || '%' OR
+                    product_price LIKE '%' || #{search_keyword} || '%' OR 
+                    parent_category LIKE '%' || #{search_keyword} || '%' OR
+                    child_category LIKE '%' || #{search_keyword} || '%'
+                )
+            </when>
+            <otherwise>
+                WHERE LOWER( ${ search_option } ) LIKE '%' || #{ search_keyword } || '%'
+            </otherwise>
+        </choose>
+    </sql>
+    
+    <sql id="category">
+        <if test="parentCategory != '전체' ">
+            AND parent_category = #{ parentCategory }
+        </if>
+        <if test="childCategory != '전체' ">
+            AND child_category = #{ childCategory }
+        </if>
+    </sql>
+      
+    <!-- ########## 상품의 이름 ########## -->
+    <select id="getProductName" resultType="String">
+        SELECT product_name
+            FROM product_info
+            WHERE product_code = #{ product_code }
+    </select>  
+    
+    <!-- ########## 상품의 자세한 정보 ########## -->
+    <select id="productInfoDetail" resultType="com.study.springboot.dto.ProductInfoDto">
+        SELECT *
+            FROM product_info
+            WHERE product_code = #{ product_code }
+    </select>
+      
+    <!-- ########## 상품 정보 수정 ########## -->
+    <update id="productInfoUpdate">
+        UPDATE product_info
+          SET product_code = #{ product_code },
+              parent_category = #{ parent_category },
+              child_category = #{ child_category },
+              manufacturer = #{ manufacturer },
+              product_name = #{ product_name },
+              product_price = #{ product_price },
+              shipping_cost = #{ shipping_cost },
+              number_of_stock = #{ number_of_stock },
+              product_description = #{ product_description }
+          WHERE product_code = #{ product_code }
+    </update> 
+    
+    <!-- ########## 상품 정보 추가 ########## -->
+    <insert id="productInfoAdd">
+        INSERT INTO product_info (product_code, parent_category, child_category, manufacturer, product_name, product_price, shipping_cost, number_of_stock, product_description)
+           VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'), 
+           #{ parent_category }, #{ child_category }, #{ manufacturer }, #{ product_name }, #{ product_price }, #{ shipping_cost }, #{ number_of_stock }, #{ product_description } )
+    </insert> 
+</mapper>

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 상품 문의 글 product_inquiry 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.IProduct_inquiryDao"> 
+
+	<!--*******************-->
+	<!--* 작업자 : 김남권 *-->
+	<!--*******************-->
+	
+	<!-- product_code에 대한 리뷰 수 조회 -->
+	<select id="countOfInquiry" resultType="int">
+		SELECT COUNT(*) FROM product_inquiry WHERE product_code=#{product_code}
+    </select>
+    
+	<!--*******************-->
+	<!--* 작업자 : 윤대호 *-->
+	<!--*******************-->
+	
+	<!-- 상품문의 날짜검색  -->
+	<select id="date_search" resultType="com.study.springboot.dto.Product_inquiryDto">
+		select * from product_inquiry 
+			where user_id=#{param3} and 
+				  inquiry_date between #{param1} and #{param2}+1 
+			order by inquiry_no desc
+	</select>
+	
+	<!-- 상품문의 기간조회  -->
+	<select id="listPageDao" resultType="com.study.springboot.dto.Product_inquiryDto">
+	   	SELECT *
+			FROM
+		    (
+		        SELECT ROWNUM AS RNUM, 
+		        	   product_inquiry.*
+		        	FROM product_inquiry 
+		        	WHERE user_id=#{param3} and 
+		        		  inquiry_date between #{param4} and #{param5}+1
+		        	ORDER BY inquiry_no desc
+		    )
+			WHERE RNUM BETWEEN #{param1} AND #{param2}
+    </select>
+    
+    <!-- 상품문의 조회  -->
+    <select id="listPageDao2" resultType="com.study.springboot.dto.Product_inquiryDto">
+	   	SELECT *
+			FROM
+		    (
+		        SELECT ROWNUM AS RNUM, 
+		        	   product_inquiry.*
+			        FROM product_inquiry 
+			        WHERE user_id=#{param3} 
+			        ORDER BY inquiry_no desc
+		    )
+			WHERE RNUM BETWEEN #{param1} AND #{param2}
+    </select>
+    
+    <!-- 상품문의 갯수세기  -->
+    <select id="count" resultType="int">
+		SELECT count(*) FROM product_inquiry where user_id =#{param1} 
+    </select>
+    
+    <!-- 상품문의 날짜 갯수세기  -->
+    <select id="count_date" resultType="int">
+		SELECT count(*) FROM product_inquiry where user_id =#{param1} AND inquiry_date between #{param2} and #{param3}+1
+    </select>
+    
+    <!-- 상품문의 삭제  -->
+    <delete id="delete">
+		delete from product_inquiry where inquiry_no = #{param1}
+	</delete>
+	
+	<!-- 상품문의 글쓰기액션  -->
+	<insert id="product_inquiry_write_action">
+		INSERT INTO product_inquiry(inquiry_no,product_code, user_id, inquiry_content, inquiry_date,private_flag) 
+			VALUES ( product_inquiry_seq.nextval, #{param1}, #{param2}, #{param3}, sysdate, #{param4})
+	</insert>
+	
+	<!-- 상품문의 수정액션  -->
+	<update id="product_inquiry_edit_action">
+		update product_inquiry set inquiry_content=#{param1},private_flag=#{param2} where inquiry_no=#{param3} and user_id=#{param4}
+	</update>
+	
+	<!-- 상품문의 상세보기  -->
+	<select id="content" resultType="com.study.springboot.dto.Product_inquiryDto">
+		SELECT * FROM product_inquiry where inquiry_no=#{param1}
+    </select>
+
+</mapper>

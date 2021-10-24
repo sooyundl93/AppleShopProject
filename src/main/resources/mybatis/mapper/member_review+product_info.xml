@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 주문 정보 order_info 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.Imember_reviewDao_Iproduct_infoDao"> 
+
+	<!--*******************-->
+	<!--* 작업자 : 윤대호 *-->
+	<!--*******************-->
+	
+	<select id="content" resultType="com.study.springboot.dto.member_review_product_infoDto">
+		SELECT * 
+			FROM member_review i left join product_info p 
+				on (i.product_code = p.product_code) 
+			WHERE inquiry_no=#{param1}
+    </select>
+    
+    <!-- 리뷰 쓰기 액션 -->
+	<insert id="writeAction">
+		INSERT INTO member_review(post_no, post_content, post_date,user_id,product_code,review_score)
+			VALUES ( member_review_seq.nextval,#{param1},sysdate,#{param2},#{param3},#{param4})
+	</insert>
+	
+	<insert id="writeAction2">
+		INSERT INTO product_info(post_no, post_content, post_date,user_id,product_code,review_score)
+			VALUES ( member_review_seq.nextval,#{param1},sysdate,#{param2},#{param3},#{param4})
+	</insert>
+	
+    
+	<select id="listPageDao" resultType="com.study.springboot.dto.member_review_product_infoDto">
+		 SELECT *
+			FROM
+		    (
+		        SELECT 
+		          	   ROWNUM AS RNUM, 
+                       i.product_code, 
+                       p.product_code AS bNo,
+                       product_name,
+                       post_content,
+                       post_date,
+                       review_score,post_no
+	       			FROM
+			            (SELECT * FROM member_review ORDER BY post_no DESC) i,
+			            product_info  p 
+		            WHERE p.product_code = i.product_code 
+		              AND user_id=#{param3} 
+		              AND post_date BETWEEN #{param4} AND #{param5}+1
+		    )
+			WHERE RNUM BETWEEN #{param1} AND #{param2} 
+    </select>
+    
+    <select id="listPageDao2" resultType="com.study.springboot.dto.member_review_product_infoDto">
+	   	 SELECT *
+			FROM
+		    (
+		        SELECT 
+		          	   ROWNUM AS RNUM, 
+                       i.product_code, 
+                       p.product_code AS bNo,
+                       product_name,
+                       post_content,
+                       post_date,
+                       review_score,post_no
+	       			FROM
+			            (SELECT * FROM member_review ORDER BY post_no DESC) i,
+			            product_info  p 
+		            WHERE p.product_code = i.product_code 
+		              AND user_id=#{param3}
+		    )
+			WHERE RNUM BETWEEN #{param1} AND #{param2}
+    </select>
+    
+</mapper>

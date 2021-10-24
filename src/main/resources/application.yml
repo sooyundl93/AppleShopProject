@@ -1,0 +1,41 @@
+mybatis:
+  configuration:
+    cache-enabled: false
+    jdbc-type-for-null: 'NULL'
+  mapper-locations: classpath:mybatis/mapper/**/**.xml
+server:
+  port: 8090
+spring:
+  datasource:
+    driver-class-name: oracle.jdbc.OracleDriver
+    password: 1234
+    url: jdbc:oracle:thin:@localhost:1521/xe
+    username: tmr_db
+  devtools:
+    livereload:
+      enabled: true
+      port: 35729
+    restart:
+      enabled: true
+  security:
+    user:
+      name: test
+      password: 1234
+  mvc:
+    view:
+      prefix: /WEB-INF/views/
+      suffix: .jsp
+  servlet:
+    multipart:
+      enabled: false
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: tomorrowhomemanager@gmail.com
+    password: '!tmr0915'
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true

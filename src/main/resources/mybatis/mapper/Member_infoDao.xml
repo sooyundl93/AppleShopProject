@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 회원 정보 member_info 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.IMember_infoDao"> 
+
+	<!--*******************-->
+	<!--* 작업자 : 김남권 *-->
+	<!--*******************-->
+	
+	<!-- 마일리지 조회를 위한 사용자 정보 조회 -->
+	<select id="get_member" resultType="com.study.springboot.dto.Member_infoDto"> 
+		SELECT * FROM MEMBER_INFO WHERE USER_ID = #{user_id}
+	</select>
+
+	<!-- 사용자 마일리지 업데이트 -->
+	<update id="update_mileage">
+		UPDATE MEMBER_INFO
+			SET mileage = #{mileage}
+			WHERE user_id = #{user_id}
+	</update>
+	
+	<!--*******************-->
+	<!--* 작업자 : 윤대호 *-->
+	<!--*******************-->
+	
+	<select id="list" resultType="com.study.springboot.dto.Member_infoDto"> 
+		SELECT * FROM member_info ORDER BY user_id
+	</select>
+	
+	<!-- 회원가입 액션 -->
+	<!-- 
+	<insert id="joinAction"> 
+		INSERT INTO member_info(user_id, 
+								user_password, 
+								user_name, 
+								birthday, 
+								email, 
+								receive_email_flag, 
+								phone_number, 
+								receive_messages_flag, 
+								postal_code, 
+								address, 
+								detailed_address, 
+								pw_question, 
+								pw_answer, 
+								member_since,
+								gender,
+								user_role) 
+			VALUES( #{param1},
+					#{param2},
+					#{param3},
+					#{param4},
+					#{param5},
+					#{param6},
+					#{param7},
+					#{param8},
+					#{param9},
+					#{param10},
+					#{param11},
+					#{param12},
+					#{param13},
+					sysdate,
+					#{param14},
+					'ROLE_USER'
+					)
+	</insert>
+	-->
+	
+	<!-- 이벤트 5000 마일리지 -->
+	<insert id="joinAction"> 
+		INSERT INTO member_info(user_id, 
+								user_password, 
+								user_name, 
+								birthday, 
+								email, 
+								receive_email_flag, 
+								phone_number, 
+								receive_messages_flag, 
+								postal_code, 
+								address, 
+								detailed_address, 
+								pw_question, 
+								pw_answer, 
+								member_since,
+								gender,
+								user_role,
+								mileage) 
+			VALUES( #{param1},
+					#{param2},
+					#{param3},
+					#{param4},
+					#{param5},
+					#{param6},
+					#{param7},
+					#{param8},
+					#{param9},
+					#{param10},
+					#{param11},
+					#{param12},
+					#{param13},
+					sysdate,
+					#{param14},
+					'ROLE_USER',
+					5000
+					)
+	</insert>
+	
+	<!-- 아이디 체크 -->
+	<select id="idCheck" resultType="_int">
+    	SELECT COUNT(*) FROM member_info WHERE user_id=#{param1}	
+	</select>
+	
+	<!-- 이메일 체크 -->
+	<select id="emailCheck" resultType="_int">
+    	SELECT COUNT(*) FROM member_info WHERE email=#{param1}	
+	</select>
+	
+	<!-- 로그인 액션 -->
+	<select id="loginAction" resultType="_int"> 
+		SELECT COUNT(*) FROM member_info WHERE user_id = #{param1} AND user_password = #{param2} 
+	</select>
+	
+	<!-- 아이디 찾기 -->
+ 	<select id="idFindAction" resultType="com.study.springboot.dto.Member_infoDto">
+	   SELECT * FROM member_info WHERE user_name=#{param1} AND email=#{param2}
+    </select>
+    
+	<!-- 비밀번호 찾기 -->
+	<select id="passwordFindAction" resultType="com.study.springboot.dto.Member_infoDto">
+       SELECT * FROM member_info WHERE user_id=#{param1} AND pw_question=#{param2} AND pw_answer=#{param3}
+	</select>
+	
+    <!-- 멤버정보 가져오기 -->
+    <select id="change" resultType="com.study.springboot.dto.Member_infoDto">
+	   SELECT * FROM member_info WHERE user_id=#{param1}
+    </select>
+    
+    <!-- 회원정보 변경 액션 -->
+    <update id="changeAction">
+		UPDATE member_info 
+			SET email = #{param1},
+				receive_email_flag = #{param2}, 
+				phone_number = #{param3},
+				receive_messages_flag = #{param4}, 
+				postal_code = #{param5},
+				address = #{param6},
+				detailed_address = #{param7},
+				pw_question = #{param8},
+				pw_answer = #{param9} 
+			WHERE   user_id = #{param10}
+				AND user_password = #{param11}
+	</update>
+	
+	<!-- 비밀번호 변경 액션 -->
+	<update id="passwordchangeAction">
+		update member_info 
+			set user_password=#{param1} 
+			where user_id=#{param2}
+	</update>
+	 
+    <!-- 회원탈퇴 액션 -->
+	<delete id="withDrawAction" >
+		delete from member_info where user_id=#{param1} and user_password=#{param2}
+	</delete>
+	
+	<!--*******************-->
+	<!--* 작업자 : 심준엽 *-->
+	<!--*******************-->
+	
+    <!-- ########## 회원 목록 생성 ########## -->
+    <select id="memberList" resultType="com.study.springboot.dto.Member_infoDto">
+        SELECT *
+        FROM (
+        SELECT ROW_NUMBER() OVER(ORDER by user_id DESC) AS
+        	row_num, user_id, user_name, email, phone_number, address
+        FROM member_info
+        <include refid="search" />
+        )
+        WHERE row_num BETWEEN #{firstRecordIndex} AND #{lastRecordIndex}
+    </select>
+    
+    <!-- ########## 회원의 레코드 수 카운트 ########## -->
+    <select id="memberCount" resultType="int">
+        SELECT count(user_id) 
+        	FROM member_info
+        <include refid="search" />
+    </select>
+ 
+  	<!-- ########## 검색 및 페이징 옵션 ########## -->
+    <sql id="search">
+        <choose>
+            <when test="search_option == 'all' ">
+                WHERE 
+                	user_id LIKE '%'||#{search_keyword}||'%'
+                    OR user_name LIKE '%' || #{search_keyword}||'%'
+                    OR email LIKE '%'||#{search_keyword}||'%'
+                    OR phone_number LIKE '%'||#{search_keyword}||'%'
+                    OR address LIKE '%'||#{search_keyword}||'%'
+            </when>
+            <otherwise>
+                WHERE ${search_option} LIKE '%'||#{search_keyword}||'%'
+            </otherwise>
+        </choose>
+    </sql>
+    
+    <!-- ########## 회원의 자세한 정보 ########## -->
+    <select id="memberInfoDetail" resultType="com.study.springboot.dto.Member_infoDto">
+        SELECT user_id, user_name, birthday, 
+               email, receive_email_flag, phone_number, receive_messages_flag,
+               postal_code, address, detailed_address,
+               pw_question, pw_answer, member_since, 
+               mileage, number_of_visits
+        	FROM member_info
+        	WHERE user_id = #{user_id}
+    </select>
+
+</mapper>

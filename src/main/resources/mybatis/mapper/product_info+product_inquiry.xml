@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 주문 정보 order_info 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.Iproduct_info_Iproduct_inquiry"> 
+
+	<!--*******************-->
+	<!--* 작업자 : 윤대호 *-->
+	<!--*******************-->
+	
+	<!-- 상품문의 상세정보 -->
+	<select id="content" resultType="com.study.springboot.dto.product_info_product_inquiryDto">
+		SELECT * 
+			FROM product_inquiry i left join 
+				 product_info p on (i.product_code = p.product_code) 
+			WHERE inquiry_no=#{param1}
+    </select>
+    
+    <!-- 상품문의 기간조회 -->
+	<select id="listPageDao" resultType="com.study.springboot.dto.product_info_product_inquiryDto">
+		SELECT *
+			FROM
+		    (
+		        SELECT 
+		            ROW_NUMBER() OVER (ORDER BY inquiry_no DESC) AS RNUM,
+		            i.product_code, 
+		            p.product_code AS bNo,
+		            product_name,
+		            inquiry_content,
+		            inquiry_date,
+		            number_of_replies,
+		            inquiry_no
+		        FROM
+		            product_inquiry i left join 
+		            product_info p 
+		            on (i.product_code = p.product_code) 
+	            WHERE user_id=#{param3} 
+	              AND inquiry_date BETWEEN #{param4} AND #{param5}+1
+		        
+		    )
+			WHERE RNUM BETWEEN #{param1} AND #{param2}
+    </select>
+    
+    <!-- 상품문의 조회  -->
+    <select id="listPageDao2" resultType="com.study.springboot.dto.product_info_product_inquiryDto">
+	    SELECT *
+			FROM
+		    (
+		         SELECT ROW_NUMBER() OVER (ORDER BY i.inquiry_no DESC) AS RNUM,
+		        	   i.product_code, 
+		        	   p.product_code AS bNo,
+		        	   product_name,
+		        	   inquiry_content,
+		        	   inquiry_date,
+		        	   number_of_replies,
+		        	   inquiry_no
+		        	FROM product_inquiry i left join 
+		        		 product_info p 
+		        		 on (i.product_code = p.product_code) 
+	        		WHERE user_id=#{param3}
+		        	
+		    )
+			WHERE RNUM BETWEEN #{param1} AND #{param2}
+    </select>
+
+</mapper>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 상품 정보 product_info AND product_image_info 조인 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.IProduct_and_imageDao"> 
+	
+	<!--*******************-->
+	<!--* 작업자 : 김남권 *-->
+	<!--*******************-->
+	
+	<!-- 입고 최신순 8항목 조회 -->
+	<select id="new8List" resultType="com.study.springboot.dto.Product_and_imageDto">
+		SELECT p.*, 
+			   i.image_file_name
+			FROM (
+					SELECT ROW_NUMBER() OVER(ORDER BY product_code DESC) AS row_num,
+						   product_code,
+						   product_name,
+						   manufacturer,
+						   product_price
+					  	FROM product_info
+				 ) p,
+				 product_image_info i 
+			WHERE p.product_code = i.product_code 
+			  AND MOD(i.image_no, 2) = 1 
+			  AND row_num <![CDATA[<]]>= 8
+			ORDER BY row_num ASC
+	</select>
+	
+	<!-- 판매량 상위 5항목 조회 -->
+	<select id="top5List" resultType="com.study.springboot.dto.Product_and_imageDto">
+		SELECT p.product_code, 
+               p.product_name, 
+               p.manufacturer, 
+               p.product_price, 
+               i.image_file_name, 
+               p.number_of_sales
+	        FROM (
+	        		SELECT ROW_NUMBER() OVER(ORDER BY number_of_sales DESC) AS row_num,
+	                       product_code, 
+	                       product_name, 
+	                       manufacturer, 
+	                       product_price, 
+	                       number_of_sales 
+	                FROM product_info
+	             ) p, 
+	             product_image_info i 
+	        WHERE p.product_code = i.product_code 
+	          AND MOD(i.image_no, 2) = 1 
+	          AND row_num <![CDATA[<]]>= 5
+	        ORDER BY p.number_of_sales DESC
+	</select>
+
+</mapper>

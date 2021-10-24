@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 주문 정보 order_info 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.IOrder_infoDao"> 
+
+
+	<!--*******************-->
+	<!--* 작업자 : 김남권 *-->
+	<!--*******************-->
+	
+	<!-- 주문정보 INSERT -->
+	<insert id="add_order_info">
+		INSERT INTO order_info(order_id, 
+	     					   user_id, 
+	     					   order_date, 
+	     					   recipient_name, 
+	     					   phone_number, 
+	     					   postal_code, 
+	     					   address, 
+	     					   detailed_address, 
+	     					   shipping_memo, 
+	     					   total_price, 
+	     					   used_mileage, 
+	     					   discounted_price, 
+	     					   total_shipping_cost, 
+	     					   payment_method, 
+	     					   accrued_mileage, 
+	     					   order_status)
+				VALUES(#{order_id}, 
+					   #{user_id}, 
+				       SYSDATE, 
+				       #{recipient_name}, 
+				       #{phone_number}, 
+					   #{postal_code}, 
+					   #{address}, 
+					   #{detailed_address}, 
+					   #{shipping_memo}, 
+					   #{total_price}, 
+					   #{used_mileage}, 
+					   #{discounted_price}, 
+					   #{total_shipping_cost}, 
+					   #{payment_method}, 
+					   #{accrued_mileage},
+					   '1'
+				   )
+	  </insert>
+   
+	<!-- 카카오페이 tid 업데이트 -->
+	<update id="update_kakao_tid">
+		UPDATE ORDER_INFO
+			SET payment_id = #{tid}
+			WHERE order_id = #{order_id}
+	</update>
+
+	<!-- 주문번호로 주문정보 조회 -->
+	<select id="get_order_info" resultType="com.study.springboot.dto.Order_infoDto">
+		SELECT * 
+			FROM ORDER_INFO
+			WHERE order_id = #{order_id}
+	</select>
+	
+	<!-- 주문상태 업데이트(입금대기 -> 입금 완료) -->
+	<update id = "update_order_status">
+		UPDATE ORDER_INFO
+			SET order_status = #{order_status}
+			WHERE order_id = #{order_id}
+	</update>
+	
+	<!--*******************-->
+	<!--* 작업자 : 윤대호 *-->
+	<!--*******************-->
+	
+	<!-- 날짜검색 -->
+	<select id="date_search" resultType="com.study.springboot.dto.Order_infoDto">
+		select * from order_info 
+			where user_id=#{param3} and order_date between #{param1} and #{param2}+1 
+			order by inquiry_no desc
+	</select>
+	
+	<!-- 기간조회  -->
+	<select id="listPageDao" resultType="com.study.springboot.dto.Order_infoDto">
+	   	SELECT *
+			FROM
+		    (
+		        SELECT ROWNUM AS RNUM, 
+		        	   order_info.*
+			        FROM order_info 
+			        WHERE user_id=#{param3} and order_date between #{param4} and #{param5}+1
+			        ORDER BY order_id desc
+		    )
+			WHERE RNUM BETWEEN #{param1} AND #{param2}
+    </select>
+    
+    <!-- 조회 -->
+    <select id="listPageDao2" resultType="com.study.springboot.dto.Order_infoDto">
+	   	SELECT *
+			FROM
+		    (
+		        SELECT ROWNUM AS RNUM, 
+		        	   order_info.*
+		        FROM order_info 
+		        WHERE user_id=#{param3} 
+		        ORDER BY order_id desc
+		    )
+			WHERE RNUM BETWEEN #{param1} AND #{param2}
+    </select>
+    
+    <!-- 갯수세기  -->
+    <select id="count" resultType="int">
+		SELECT count(*) FROM order_info where user_id =#{param1} 
+    </select>
+    
+    <!-- 날짜 갯수세기  -->
+    <select id="count_date" resultType="int">
+		SELECT count(*) FROM order_info where user_id =#{param1} and order_date between #{param2} and #{param3}+1
+    </select>
+    
+    <!-- 상세보기  -->
+	<select id="content" resultType="com.study.springboot.dto.Order_infoDto">
+		SELECT * FROM order_info i, order_product_info p WHERE i.order_id=#{param1}
+	</select>
+	
+	<!-- 멤버정보 -->
+	<select id="member_info" resultType="com.study.springboot.dto.Order_infoDto">
+		SELECT * FROM order_info where user_id=#{param1}
+    </select>
+    
+    <!-- 주문상태 1 입금대기  -->
+    <select id="order_status1" resultType="int">
+		SELECT count(order_status) FROM order_info where order_status ='1' and user_id=#{param1}
+    </select>
+    
+    <!-- 주문상태 2 입금완료 -->
+	<select id="order_status2" resultType="int">
+		SELECT count(order_status) FROM order_info where order_status ='2' and user_id=#{param1}
+    </select>
+    
+    <!-- 주문상태 3 배송완료  -->
+	<select id="order_status3" resultType="int">
+		SELECT count(order_status) FROM order_info where order_status ='3' and user_id=#{param1}
+    </select>
+    
+    <!-- 주문상태 4 취소 -->
+	<select id="order_status4" resultType="int">
+		SELECT count(order_status) FROM order_info where order_status ='4' and user_id=#{param1}
+    </select>
+    
+    <!-- 주문상태 5 교환  -->
+    <select id="order_status5" resultType="int">
+		SELECT count(order_status) FROM order_info where order_status ='5' and user_id=#{param1}
+    </select>
+    
+    <!-- 주문상태 6 환불  -->
+    <select id="order_status6" resultType="int">
+		SELECT count(order_status) FROM order_info where order_status ='6' and user_id=#{param1}
+    </select>
+    
+</mapper>

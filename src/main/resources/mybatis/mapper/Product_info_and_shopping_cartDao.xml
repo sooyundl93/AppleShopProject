@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 주문결제폼 product_info AND shopping_cart AND product_image_info 테이블 조인 xml -->
+
+<mapper namespace="com.study.springboot.dao.IProduct_info_and_shopping_cartDao"> 
+	
+	<!--*******************-->
+	<!--* 작업자 : 김남권 *-->
+	<!--*******************-->
+	
+	<!-- 주문 상품정보 조회 -->
+	<select id="user_cart_list" resultType="com.study.springboot.dto.Product_info_and_shopping_cartDto"> 
+		SELECT pi.product_code,
+        	   pi.product_name,
+        	   pi.product_price,
+        	   sc.user_id,
+        	   sc.number_of_products,
+        	   pii.image_file_name,
+        	   (pi.product_price * sc.number_of_products) AS "product_total_price", 
+        	   (pi.shipping_cost * sc.number_of_products) AS "product_shipping_cost"
+        	FROM PRODUCT_INFO pi, SHOPPING_CART sc, PRODUCT_IMAGE_INFO pii
+    		WHERE pi.product_code = sc.product_code 
+        		AND sc.product_code = pii.product_code
+        		AND sc.user_id = #{user_id}
+        		AND MOD(pii.image_no, 2) = 1
+    		ORDER BY pi.product_code
+	</select>
+	
+	<!-- 상품 총 배송비 조회 -->
+	<select id="for_shipping_cost" resultType="com.study.springboot.dto.Product_info_and_shopping_cartDto">
+		SELECT pi.product_code,
+        	   pi.product_name,
+        	   pi.product_price,
+        	   sc.user_id,
+        	   sc.number_of_products,
+        	   pii.image_file_name,
+        	   (pi.product_price * sc.number_of_products) AS "product_total_price", 
+        	   (pi.shipping_cost * sc.number_of_products) AS "product_shipping_cost"
+        	FROM PRODUCT_INFO pi, SHOPPING_CART sc, PRODUCT_IMAGE_INFO pii
+    		WHERE pi.product_code = #{product_code}
+    			AND pi.product_code = sc.product_code 
+        		AND sc.product_code = pii.product_code
+        		AND sc.user_id = #{user_id}
+        		AND MOD(pii.image_no, 2) = 1
+    		ORDER BY pi.product_code
+	</select>
+
+</mapper>

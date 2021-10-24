@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.study.springboot.dao.IMemberReviewDao"> 
+
+    <!--##############################-->
+    <!--#                            #-->
+    <!--#         작업자: 심준엽     #-->
+    <!--#                            #-->
+    <!--##############################-->
+  
+    <!-- ########## 회원의 리뷰 건수 ########## -->
+    <select id="countOfMemberReviews" resultType="int">
+        SELECT COUNT(post_no)
+            FROM member_review
+            WHERE user_id = #{userId}
+    </select>
+    
+    <!-- ########## 회원의 리뷰 평균점수 ########## -->
+    <select id="averageOfReviewScores" resultType="Float">
+        SELECT AVG(review_score)
+		    FROM member_review
+		    WHERE user_id = #{userId}
+    </select>
+    
+        <!-- ########## 레코드 수 ########## -->
+    <select id="countRecords" resultType="int">
+        SELECT count(post_no) 
+            FROM member_review
+        <include refid="search" />
+        <include refid="date_interval" />
+    </select>
+    
+    <!-- ########## 목록 생성 ########## -->
+    <select id="relationInstance" resultType="com.study.springboot.dto.MemberReviewDto">
+        SELECT *
+            FROM (
+	            SELECT ROW_NUMBER() OVER(ORDER by ${sortRecords}, post_no DESC) AS
+	                row_num, post_no, product_code, user_id, review_score, post_date, post_content
+	            FROM member_review
+	            <include refid="search" />
+	            <include refid="date_interval" />
+	            )
+            WHERE row_num BETWEEN #{firstRecordIndex} AND #{lastRecordIndex}
+    </select>
+    
+    <!-- ########## 검색 및 페이징 옵션 ########## -->
+    <sql id="search">
+        <choose>
+            <when test="search_option == 'all' ">
+                WHERE (
+		                LOWER( user_id ) LIKE '%' || #{search_keyword} || '%' OR
+		                LOWER( product_code ) LIKE '%' || #{search_keyword} || '%' OR
+                    LOWER( post_content ) LIKE '%' || #{search_keyword} || '%'
+                )
+            </when>
+            <otherwise>
+                WHERE LOWER( ${search_option} ) LIKE '%'||#{search_keyword}||'%'
+            </otherwise>
+        </choose>
+    </sql>
+    
+    <!-- ########## 날짜 간격 검색 옵션 ########## -->
+    <sql id="date_interval">
+        AND post_date 
+            BETWEEN TO_DATE(#{from_this_date}, 'YYYY-MM-DD') 
+            AND TO_DATE(#{to_this_date}, 'YYYY-MM-DD') + 1
+    </sql>
+    
+    <!-- ########## 리뷰 내용 ########## -->
+    <select id="getContent" resultType="com.study.springboot.dto.MemberReviewDto">
+        SELECT *
+            FROM ${ table_name }
+            WHERE post_no = #{ post_no }
+    </select>
+    
+</mapper>

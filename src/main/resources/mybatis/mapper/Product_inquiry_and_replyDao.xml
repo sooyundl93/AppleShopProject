@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 상품 문의 product_inquiry AND product_inquiry_reply 조인 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.IProduct_inquiry_and_replyDao"> 
+
+	<!--*******************-->
+	<!--* 작업자 : 김남권 *-->
+	<!--*******************-->
+	
+	<!-- 상품 코드로 상품 문의글 카운트 조회 -->
+	<select id="product_qna_count" resultType="int">
+		SELECT COUNT(*) 
+			FROM PRODUCT_INQUIRY 
+			WHERE product_code = #{product_code}
+			  AND (private_flag = 'N' OR user_id = #{user_id})
+	</select>
+	
+	<!-- 상품 코드로 상품 문의글 & 답변 조회 -->
+	<select id="product_qna" resultType="com.study.springboot.dto.Product_inquiry_and_replyDto">
+		SELECT pi.*,
+			   REPLACE(pr.user_id, 'admin00', '내일의 집') AS "admin_id", 
+			   pr.reply_content, 
+			   pr.reply_date 
+			FROM (
+					SELECT ROW_NUMBER() OVER(ORDER BY inquiry_no DESC) AS row_num,
+						   inquiry_no,  
+						   user_id, 
+						   inquiry_content, 
+						   private_flag, 
+						   inquiry_date 
+						FROM PRODUCT_INQUIRY 
+						WHERE product_code = #{product_code}
+						  AND (private_flag = 'N' OR user_id = #{user_id})
+				 ) pi LEFT OUTER JOIN
+				 (
+				 	SELECT inquiry_no, 
+						   user_id, 
+						   reply_content, 
+						   reply_date 
+						FROM PRODUCT_INQUIRY_REPLY
+				 ) pr 
+				 on (pi.inquiry_no = pr.inquiry_no)
+			WHERE row_num BETWEEN #{firstRecordIndex} AND #{lastRecordIndex}
+			ORDER BY pi.inquiry_no DESC
+	</select>
+
+</mapper>

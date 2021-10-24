@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 공지사항 이미지 정보 notice_image_info 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.INotice_image_infoDao"> 
+
+	<!--*******************-->
+	<!--* 작업자 : 장수연 *-->
+	<!--*******************-->
+	
+	<!-- 공지사항 이미지 조회 -->
+	<select id="notice_view_image" resultType="com.study.springboot.dto.Notice_image_infoDto"> 
+		SELECT * FROM notice_image_info WHERE post_no=#{param1}
+	</select>
+	
+</mapper>

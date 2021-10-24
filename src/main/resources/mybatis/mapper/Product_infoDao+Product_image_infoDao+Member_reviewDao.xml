@@ -1,0 +1,654 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 상품 정보 		  product_info 		 -->
+<!-- 상품 이미지 정보 product_image_info -->
+<!-- 회원 리뷰 		  member_review 	 -->
+
+<mapper namespace="com.study.springboot.dao.IProduct_infoDao_IProduct_image_infoDao_IMember_reviewDao"> 
+
+	<!--*******************-->
+	<!--* 작업자 : 윤대호 *-->
+	<!--*******************-->
+
+	<!-- 상품이름, 상품설명으로 목록 조회 -->
+	<select id="allSearch" resultType="com.study.springboot.dto.Product_infoDto_Product_image_infoDto_Member_reviewDto">
+		SELECT *
+		    FROM
+		    (
+		        SELECT pi.RNUM,
+		               pi.product_code,
+		               pi.product_name,
+		               pi.manufacturer,
+		               pi.product_price,
+		               pi.image_file_name,
+		               pi.parent_category,
+		               pi.child_category,
+		               trunc(NVL(r.a, 0),1) AS "average_review_score",
+		               NVL(r.b, 0) AS "count_of_review"
+		            FROM
+		                (
+			                 SELECT ROW_NUMBER() OVER (ORDER BY i.product_code DESC) AS RNUM,
+			                        i.product_code,
+			                        i.product_name,
+			                        i.manufacturer,
+			                        i.product_price,
+			                        p.image_no,
+			                        p.image_file_name,
+			                        i.parent_category,
+			                        i.child_category
+			                    FROM product_info i, 
+			                    	 product_image_info p
+			                    WHERE i.product_code = p.product_code
+			                      AND MOD(p.image_no, 2) = 1 
+			                      AND (product_name LIKE '%'||#{searchWord}||'%' OR  product_description LIKE '%'||#{searchWord}||'%')
+			                    ORDER BY i.product_code DESC
+	                    ) pi left join
+		                (
+			                 SELECT product_code,
+			                        AVG(review_score) as a,
+			                        COUNT(product_code) as b
+			                    FROM member_review
+			                    GROUP BY product_code
+	                    ) r 
+	                    on (pi.product_code = r.product_code)
+		    )
+		    WHERE RNUM BETWEEN #{param1} AND #{param2}
+		    ORDER BY RNUM ASC   
+	</select>
+	
+	<!-- 상품검색 갯수세기 -->
+    <select id="count_search" resultType="int">
+   	 	SELECT count(*) 
+   	 		FROM product_info 
+   	 		WHERE product_name LIKE '%'||#{searchWord}||'%' 
+   	 		   OR  product_description LIKE '%'||#{searchWord}||'%'
+    </select>
+    
+	<!-- 상품리스트 전체보기 -->
+	<select id="all" resultType="com.study.springboot.dto.Product_infoDto_Product_image_infoDto_Member_reviewDto"> 
+		SELECT * FROM product_info i left join product_image_info p on (i.product_code = p.product_code) 
+	</select>
+	
+	<!-- 상품리스트 전체보기 -->
+	<select id="listPageDao2" resultType="com.study.springboot.dto.Product_infoDto_Product_image_infoDto_Member_reviewDto">
+     	SELECT *
+		    FROM
+		    (
+		        SELECT pi.RNUM,
+		               pi.product_code,
+		               pi.product_name,
+		               pi.manufacturer,
+		               pi.product_price,
+		               pi.image_file_name,
+		               pi.parent_category,
+		               pi.child_category,
+		               trunc(NVL(r.a, 0),1) AS "average_review_score",
+		               NVL(r.b, 0) AS "count_of_review"
+		            FROM
+		                (
+			                 SELECT ROW_NUMBER() OVER (ORDER BY i.product_code DESC) AS RNUM,
+			                        i.product_code,
+			                        i.product_name,
+			                        i.manufacturer,
+			                        i.product_price,
+			                        p.image_no,
+			                        p.image_file_name,
+			                        i.parent_category,
+			                        i.child_category
+			                    FROM product_info i, 
+			                    	 product_image_info p
+			                    WHERE i.product_code = p.product_code
+			                      AND MOD(p.image_no, 2) = 1
+			                    ORDER BY i.product_code DESC
+	                    ) pi left join
+		                (
+			                 SELECT product_code,
+			                        AVG(review_score) as a,
+			                        COUNT(product_code) as b
+			                    FROM member_review
+			                    GROUP BY product_code
+	                    ) r 
+	                    on (pi.product_code = r.product_code)
+		    )
+		    WHERE RNUM BETWEEN #{param1} AND #{param2}
+		    ORDER BY RNUM ASC   
+    </select>
+    
+    <!-- 상품리스트 별점순 -->
+    <select id="listPageDao2_star" resultType="com.study.springboot.dto.Product_infoDto_Product_image_infoDto_Member_reviewDto">
+	 	SELECT *
+		    FROM
+		    (
+		        SELECT ROW_NUMBER() OVER (ORDER BY NVL(r.a, 0) DESC) AS RNUM,
+		               pi.product_code,
+		               pi.product_name,
+		               pi.manufacturer,
+		               pi.product_price,
+		               pi.image_file_name,
+		               pi.parent_category,
+		               pi.child_category,
+		               trunc(NVL(r.a, 0),1) AS "average_review_score",
+		               NVL(r.b, 0) AS "count_of_review"
+		            FROM
+		                (
+			                 SELECT i.product_code,
+			                        i.product_name,
+			                        i.manufacturer,
+			                        i.product_price,
+			                        p.image_no,
+			                        p.image_file_name,
+			                        i.parent_category,
+			                        i.child_category
+			                    FROM product_info i, 
+			                    	 product_image_info p
+			                    WHERE i.product_code = p.product_code
+			                      AND MOD(p.image_no, 2) = 1
+			                    ORDER BY i.product_code DESC
+	                    ) pi LEFT OUTER JOIN
+		                (
+			                 SELECT product_code,
+			                        NVL(AVG(review_score), 0) as a,
+			                        COUNT(product_code) as b
+			                    FROM member_review
+			                    GROUP BY product_code
+	                    ) r 
+	                    on (pi.product_code = r.product_code)
+		    )
+		    WHERE RNUM BETWEEN #{param1} AND #{param2}
+		    ORDER BY RNUM         
+    </select>
+    
+    <!-- 상품리스트 가격낮은순 -->
+ 	<select id="listPageDao2_low" resultType="com.study.springboot.dto.Product_infoDto_Product_image_infoDto_Member_reviewDto">
+		SELECT *
+		    FROM
+		    (
+		        SELECT pi.RNUM,
+		               pi.product_code,
+		               pi.product_name,
+		               pi.manufacturer,
+		               pi.product_price,
+		               pi.image_file_name,
+		               pi.parent_category,
+		               pi.child_category,
+		               trunc(NVL(r.a, 0),1) AS "average_review_score",
+		               NVL(r.b, 0) AS "count_of_review"
+		            FROM
+		                (
+			                 SELECT ROW_NUMBER() OVER (ORDER BY i.product_price ASC) AS RNUM,
+			                        i.product_code,
+			                        i.product_name,
+			                        i.manufacturer,
+			                        i.product_price,
+			                        p.image_no,
+			                        p.image_file_name,
+			                        i.parent_category,
+			                        i.child_category
+			                    FROM product_info i, 
+			                    	 product_image_info p
+			                    WHERE i.product_code = p.product_code
+			                      AND MOD(p.image_no, 2) = 1
+			                    ORDER BY i.product_code DESC
+	                    ) pi left join
+		                (
+			                 SELECT product_code,
+			                        AVG(review_score) as a,
+			                        COUNT(product_code) as b
+			                    FROM member_review
+			                    GROUP BY product_code
+	                    ) r 
+	                    on (pi.product_code = r.product_code)
+		    )
+		    WHERE RNUM BETWEEN #{param1} AND #{param2}
+		    ORDER BY RNUM ASC   
+    </select>
+    
+     <!-- 상품리스트 가격높은순 -->
+    <select id="listPageDao2_high" resultType="com.study.springboot.dto.Product_infoDto_Product_image_infoDto_Member_reviewDto">
+		SELECT *
+		    FROM
+		    (
+		        SELECT pi.RNUM,
+		               pi.product_code,
+		               pi.product_name,
+		               pi.manufacturer,
+		               pi.product_price,
+		               pi.image_file_name,
+		               pi.parent_category,
+		               pi.child_category,
+		               trunc(NVL(r.a, 0),1) AS "average_review_score",
+		               NVL(r.b, 0) AS "count_of_review"
+		            FROM
+		                (
+			                 SELECT ROW_NUMBER() OVER (ORDER BY i.product_price DESC) AS RNUM,
+			                        i.product_code,
+			                        i.product_name,
+			                        i.manufacturer,
+			                        i.product_price,
+			                        p.image_no,
+			                        p.image_file_name,
+			                        i.parent_category,
+			                        i.child_category
+			                    FROM product_info i, 
+			                    	 product_image_info p
+			                    WHERE i.product_code = p.product_code
+			                      AND MOD(p.image_no, 2) = 1
+			                    ORDER BY i.product_code DESC
+	                    ) pi left join
+		                (
+			                 SELECT product_code,
+			                        AVG(review_score) as a,
+			                        COUNT(product_code) as b
+			                    FROM member_review
+			                    GROUP BY product_code
+	                    ) r 
+	                    on (pi.product_code = r.product_code)
+		    )
+		    WHERE RNUM BETWEEN #{param1} AND #{param2}
+		    ORDER BY RNUM ASC   
+    </select>
+    
+    <!-- 상품리스트 갯수세기 -->
+    <select id="count" resultType="int">
+   	 	SELECT count(*) FROM product_info  
+    </select>
+    
+    <!-- 상품리스트 리뷰갯수세기 -->
+    <select id="review_count" resultType="com.study.springboot.dto.Product_infoDto_Product_image_infoDto_Member_reviewDto">
+   	 	SELECT count(*) FROM member_review WHERE product_code=#{param1}
+    </select>
+    
+   	<!--*******************-->
+	<!--*     카테고리    *-->
+	<!--*******************-->
+	
+    <!-- 카테고리 -->
+   	<select id="category" resultType="com.study.springboot.dto.Product_infoDto_Product_image_infoDto_Member_reviewDto">
+		SELECT *
+		    FROM
+		    (
+		        SELECT pi.RNUM,
+		               pi.product_code,
+		               pi.product_name,
+		               pi.manufacturer,
+		               pi.product_price,
+		               pi.image_file_name,
+		               pi.parent_category,
+		               pi.child_category,
+		               trunc(NVL(r.a, 0),1) AS "average_review_score",
+		               NVL(r.b, 0) AS "count_of_review"
+		            FROM
+		                (
+			                 SELECT ROW_NUMBER() OVER (ORDER BY i.product_code DESC) AS RNUM,
+			                        i.product_code,
+			                        i.product_name,
+			                        i.manufacturer,
+			                        i.product_price,
+			                        p.image_no,
+			                        p.image_file_name,
+			                        i.parent_category,
+			                        i.child_category
+			                    FROM product_info i, 
+			                    	 product_image_info p
+			                    WHERE i.product_code = p.product_code
+			                      AND MOD(p.image_no, 2) = 1 
+			                      AND parent_category=#{param3} 
+			                      AND child_category=#{param4}
+			                    ORDER BY i.product_code DESC
+	                    ) pi left join
+		                (
+			                 SELECT product_code,
+			                        AVG(review_score) as a,
+			                        COUNT(product_code) as b
+			                    FROM member_review
+			                    GROUP BY product_code
+	                    ) r 
+	                    on (pi.product_code = r.product_code)
+		    )
+		    WHERE RNUM BETWEEN #{param1} AND #{param2} 
+		    ORDER BY RNUM ASC   
+    </select>
+    
+    <!-- 카테고리 별점순 -->
+    <select id="category_star" resultType="com.study.springboot.dto.Product_infoDto_Product_image_infoDto_Member_reviewDto">
+		SELECT *
+			FROM
+			(
+			    SELECT ROW_NUMBER() OVER (ORDER BY NVL(r.a, 0) desc) AS RNUM,
+			           pi.product_code,
+			           pi.product_name,
+			           pi.manufacturer,
+			           pi.product_price,
+			           pi.image_file_name,
+			           pi.parent_category,
+			           pi.child_category,
+			           trunc(NVL(r.a, 0),1) AS "average_review_score",
+			           NVL(r.b, 0) AS "count_of_review"
+			        FROM
+			            (
+				             SELECT i.product_code,
+				                    i.product_name,
+				                    i.manufacturer,
+				                    i.product_price,
+				                    p.image_no,
+				                    p.image_file_name,
+				                    i.parent_category,
+				                    i.child_category
+				                FROM product_info i, 
+				                	 product_image_info p
+				                WHERE i.product_code = p.product_code
+				                  AND MOD(p.image_no, 2) = 1 
+				                  AND parent_category=#{param3} 
+				                  AND child_category=#{param4}
+				                ORDER BY i.product_code DESC
+		                ) pi LEFT OUTER JOIN
+			            (
+				             SELECT product_code,
+				                    NVL(AVG(review_score), 0) as a,
+				                    COUNT(product_code) as b
+				                FROM member_review
+				                GROUP BY product_code
+		                ) r 
+		                on (pi.product_code = r.product_code) 
+			)
+			WHERE RNUM BETWEEN #{param1} AND #{param2} 
+			ORDER BY RNUM         
+    </select>
+    
+    <!-- 카테고리 가격낮은순 -->
+   	<select id="category_low" resultType="com.study.springboot.dto.Product_infoDto_Product_image_infoDto_Member_reviewDto">
+		SELECT *
+		    FROM
+		    (
+		        SELECT pi.RNUM,
+		               pi.product_code,
+		               pi.product_name,
+		               pi.manufacturer,
+		               pi.product_price,
+		               pi.image_file_name,
+		               pi.parent_category,
+		               pi.child_category,
+		               trunc(NVL(r.a, 0),1) AS "average_review_score",
+		               NVL(r.b, 0) AS "count_of_review"
+		            FROM
+		                (
+			                 SELECT ROW_NUMBER() OVER (ORDER BY i.product_price ASC) AS RNUM,
+			                        i.product_code,
+			                        i.product_name,
+			                        i.manufacturer,
+			                        i.product_price,
+			                        p.image_no,
+			                        p.image_file_name,
+			                        i.parent_category,
+			                        i.child_category
+			                    FROM product_info i, 
+			                    	 product_image_info p
+			                    WHERE i.product_code = p.product_code
+			                      AND MOD(p.image_no, 2) = 1 
+			                      AND parent_category=#{param3} 
+			                      AND child_category=#{param4}
+			                    ORDER BY i.product_code DESC
+	                    ) pi left join
+		                (
+			                 SELECT product_code,
+			                        AVG(review_score) as a,
+			                        COUNT(product_code) as b
+			                    FROM member_review
+			                    GROUP BY product_code
+	                    ) r 
+	                    on (pi.product_code = r.product_code)
+		    )
+		    WHERE RNUM BETWEEN #{param1} AND #{param2} 
+		    ORDER BY RNUM ASC 
+    </select>
+    
+    <!-- 카테고리 가격높은순 -->
+    <select id="category_high" resultType="com.study.springboot.dto.Product_infoDto_Product_image_infoDto_Member_reviewDto">
+		SELECT *
+		    FROM
+		    (
+		        SELECT pi.RNUM,
+		               pi.product_code,
+		               pi.product_name,
+		               pi.manufacturer,
+		               pi.product_price,
+		               pi.image_file_name,
+		               pi.parent_category,
+		               pi.child_category,
+		               trunc(NVL(r.a, 0),1) AS "average_review_score",
+		               NVL(r.b, 0) AS "count_of_review"
+		            FROM
+		                (
+			                 SELECT ROW_NUMBER() OVER (ORDER BY i.product_price DESC) AS RNUM,
+			                        i.product_code,
+			                        i.product_name,
+			                        i.manufacturer,
+			                        i.product_price,
+			                        p.image_no,
+			                        p.image_file_name,
+			                        i.parent_category,
+			                        i.child_category
+			                    FROM product_info i, 
+			                    	 product_image_info p
+			                    WHERE i.product_code = p.product_code
+			                      AND MOD(p.image_no, 2) = 1 
+			                      AND parent_category=#{param3} 
+			                      AND child_category=#{param4}
+			                    ORDER BY i.product_code DESC
+	                    ) pi left join
+		                (
+			                 SELECT product_code,
+			                        AVG(review_score) as a,
+			                        COUNT(product_code) as b
+			                    FROM member_review
+			                    GROUP BY product_code
+	                    ) r 
+	                    on (pi.product_code = r.product_code)
+		    )
+		    WHERE RNUM BETWEEN #{param1} AND #{param2} 
+		    ORDER BY RNUM ASC   
+    </select>
+    
+    <!-- 카테고리 갯수세기 -->
+    <select id="category_count" resultType="int">
+	 	SELECT count(*) FROM product_info WHERE parent_category=#{param1} AND child_category=#{param2}
+    </select>
+
+	
+	<!--*******************-->
+	<!--*     인테리어    *-->
+	<!--*******************-->
+	
+	<!-- 인테리어  -->
+	<select id="interior" resultType="com.study.springboot.dto.Product_infoDto_Product_image_infoDto_Member_reviewDto"> 
+		SELECT *
+		    FROM
+		    (
+		        SELECT pi.RNUM,
+		               pi.product_code,
+		               pi.product_name,
+		               pi.manufacturer,
+		               pi.product_price,
+		               pi.image_file_name,
+		               pi.parent_category,
+		               pi.child_category,
+		               trunc(NVL(r.a, 0),1) AS "average_review_score",
+		               NVL(r.b, 0) AS "count_of_review"
+		            FROM
+		                (
+			                 SELECT ROW_NUMBER() OVER (ORDER BY i.product_code DESC) AS RNUM,
+			                        i.product_code,
+			                        i.product_name,
+			                        i.manufacturer,
+			                        i.product_price,
+			                        p.image_no,
+			                        p.image_file_name,
+			                        i.parent_category,
+			                        i.child_category
+			                    FROM product_info i, 
+			                    	 product_image_info p
+			                    WHERE i.product_code = p.product_code
+			                      AND MOD(p.image_no, 2) = 1 
+			                      AND parent_category='인테리어'
+			                    ORDER BY i.product_code DESC
+	                    ) pi left join
+		                (
+			                 SELECT product_code,
+			                        AVG(review_score) as a,
+			                        COUNT(product_code) as b
+			                    FROM member_review
+			                    GROUP BY product_code
+	                    ) r 
+	                    on (pi.product_code = r.product_code)
+		    )
+		    WHERE RNUM BETWEEN #{param1} AND #{param2} 
+		    ORDER BY RNUM ASC 
+	</select>
+	
+	<!-- 인테리어 별점순 -->
+	<select id="interior_star" resultType="com.study.springboot.dto.Product_infoDto_Product_image_infoDto_Member_reviewDto"> 
+		SELECT *
+		    FROM
+		    (
+		        SELECT ROW_NUMBER() OVER (ORDER BY NVL(r.a, 0) desc) AS RNUM,
+		               pi.product_code,
+		               pi.product_name,
+		               pi.manufacturer,
+		               pi.product_price,
+		               pi.image_file_name,
+		               pi.parent_category,
+		               pi.child_category,
+		               trunc(NVL(r.a, 0),1) AS "average_review_score",
+		               NVL(r.b, 0) AS "count_of_review"
+		            FROM
+		                (
+			                 SELECT i.product_code,
+			                        i.product_name,
+			                        i.manufacturer,
+			                        i.product_price,
+			                        p.image_no,
+			                        p.image_file_name,
+			                        i.parent_category,
+			                        i.child_category
+			                    FROM product_info i, 
+			                    	 product_image_info p
+			                    WHERE i.product_code = p.product_code
+			                      AND MOD(p.image_no, 2) = 1 
+			                      AND parent_category='인테리어'
+			                    ORDER BY i.product_code DESC
+	                    ) pi LEFT OUTER JOIN
+		                (
+			                 SELECT product_code,
+			                        NVL(AVG(review_score), 0) as a,
+			                        COUNT(product_code) as b
+			                    FROM member_review
+			                    GROUP BY product_code
+	                    ) r 
+	                    on (pi.product_code = r.product_code) 
+		    )
+		    WHERE RNUM BETWEEN #{param1} AND #{param2} 
+		    ORDER BY RNUM         
+	</select>
+	
+	<!-- 인테리어 가격낮은순 -->
+	<select id="interior_low" resultType="com.study.springboot.dto.Product_infoDto_Product_image_infoDto_Member_reviewDto"> 
+		SELECT *
+		    FROM
+		    (
+		        SELECT pi.RNUM,
+		               pi.product_code,
+		               pi.product_name,
+		               pi.manufacturer,
+		               pi.product_price,
+		               pi.image_file_name,
+		               pi.parent_category,
+		               pi.child_category,
+		               trunc(NVL(r.a, 0),1) AS "average_review_score",
+		               NVL(r.b, 0) AS "count_of_review"
+		            FROM
+		                (
+			                 SELECT ROW_NUMBER() OVER (ORDER BY i.product_price ASC) AS RNUM,
+			                        i.product_code,
+			                        i.product_name,
+			                        i.manufacturer,
+			                        i.product_price,
+			                        p.image_no,
+			                        p.image_file_name,
+			                        i.parent_category,
+			                        i.child_category
+			                    FROM product_info i, 
+			                    	 product_image_info p
+			                    WHERE i.product_code = p.product_code
+			                      AND MOD(p.image_no, 2) = 1 
+			                      AND parent_category='인테리어'
+			                    ORDER BY i.product_code DESC
+	                    ) pi left join
+		                (
+			                 SELECT product_code,
+			                        AVG(review_score) as a,
+			                        COUNT(product_code) as b
+			                    FROM member_review
+			                    GROUP BY product_code
+	                    ) r 
+	                    on (pi.product_code = r.product_code)
+		    )
+		    WHERE RNUM BETWEEN #{param1} AND #{param2} 
+		    ORDER BY RNUM ASC 
+	</select>
+	
+	<!-- 인테리어 가격높은순 -->
+	<select id="interior_high" resultType="com.study.springboot.dto.Product_infoDto_Product_image_infoDto_Member_reviewDto"> 
+		SELECT *
+		    FROM
+		    (
+		        SELECT pi.RNUM,
+		               pi.product_code,
+		               pi.product_name,
+		               pi.manufacturer,
+		               pi.product_price,
+		               pi.image_file_name,
+		               pi.parent_category,
+		               pi.child_category,
+		               trunc(NVL(r.a, 0),1) AS "average_review_score",
+		               NVL(r.b, 0) AS "count_of_review"
+		            FROM
+		                (
+			                 SELECT ROW_NUMBER() OVER (ORDER BY i.product_price DESC) AS RNUM,
+			                        i.product_code,
+			                        i.product_name,
+			                        i.manufacturer,
+			                        i.product_price,
+			                        p.image_no,
+			                        p.image_file_name,
+			                        i.parent_category,
+			                        i.child_category
+			                    FROM product_info i, 
+			                    	 product_image_info p
+			                    WHERE i.product_code = p.product_code
+			                      AND MOD(p.image_no, 2) = 1 
+			                      AND parent_category='인테리어'
+			                    ORDER BY i.product_code DESC
+	                    ) pi left join
+		                (
+			                 SELECT product_code,
+			                        AVG(review_score) as a,
+			                        COUNT(product_code) as b
+			                    FROM member_review
+			                    GROUP BY product_code
+	                    ) r 
+	                    on (pi.product_code = r.product_code)
+		    )
+		    WHERE RNUM BETWEEN #{param1} AND #{param2} 
+		    ORDER BY RNUM ASC 
+	</select>
+	
+	<!-- 인테리어 갯수세기 -->
+	<select id="interior_count" resultType="int">
+   		SELECT count(*) FROM product_info WHERE parent_category='인테리어'
+    </select>
+
+</mapper>

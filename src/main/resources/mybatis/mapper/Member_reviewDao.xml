@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 회원 상품 리뷰 member_review 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.IMember_reviewDao"> 
+
+	<!--*******************-->
+	<!--* 작업자 : 김남권 *-->
+	<!--*******************-->
+	
+	<!-- product_code에 대한 리뷰 수 조회 -->
+	<select id="countOfReview" resultType="int">
+		SELECT COUNT(*) FROM member_review WHERE product_code=#{product_code}
+    </select>
+
+	<!--*******************-->
+	<!--* 작업자 : 윤대호 *-->
+	<!--*******************-->
+	
+	<!-- 컨텐츠 보기 -->
+	<select id="content" resultType="com.study.springboot.dto.Member_reviewDto">
+		SELECT * FROM member_review where post_no=#{param1}
+    </select>
+    
+ 	<!-- 리뷰 쓰기 액션 -->
+	<insert id="product_review_write_action">
+		insert into member_review(post_no, post_content, post_date,user_id,product_code,review_score) 
+			VALUES ( member_review_seq.nextval,#{param1},sysdate,#{param2},#{param3},#{param4})
+	</insert>
+	
+	<!-- 리뷰 수정 액션 -->
+	<update id="product_review_edit_action">
+		update member_review 
+			set post_content=#{param1},
+				review_score=#{param4} 
+			where post_no=#{param2} and user_id=#{param3}
+	</update>
+	
+	<!-- 리뷰 삭제 액션 -->
+	<delete id="delete">
+		delete from member_review where post_no = #{param1}
+	</delete>
+	
+	<!-- 리뷰 날짜 조회 -->
+	<select id="date_search" resultType="com.study.springboot.dto.Member_reviewDto">
+		select * 
+			from member_review 
+			where user_id=#{param3} and 
+				  post_date between #{param1} and #{param2}+1 
+			order by post_no desc
+	</select>
+	
+	<!-- 리뷰 기간 조회 -->
+	<select id="listPageDao" resultType="com.study.springboot.dto.Member_reviewDto">
+	   	SELECT *
+			FROM
+		    (
+		        SELECT ROWNUM AS RNUM, 
+		        	   member_review.*
+		        FROM
+		            member_review 
+	            WHERE user_id=#{param3} and post_date between #{param4} and #{param5}+1
+		        ORDER BY post_no desc
+		    )
+			WHERE RNUM BETWEEN #{param1} AND #{param2}
+    </select>
+    
+    <!-- 리뷰 조회 -->
+    <select id="listPageDao2" resultType="com.study.springboot.dto.Member_reviewDto">
+	   	SELECT *
+			FROM
+		    (
+		        SELECT ROWNUM AS RNUM, 
+		        	   member_review.*
+		        	FROM member_review 
+		        	WHERE user_id=#{param3} 
+		        	ORDER BY post_no desc
+		    )
+			WHERE RNUM BETWEEN #{param1} AND #{param2}
+    </select>
+    
+    <!-- 리뷰 갯수세기 -->
+    <select id="count" resultType="int">
+		SELECT count(*) FROM member_review where user_id =#{param1} 
+    </select>
+    
+    <!-- 리뷰 날짜 갯수세기 -->
+    <select id="count_date" resultType="int">
+		SELECT count(*) FROM member_review where user_id =#{param1} and post_date between #{param2} and #{param3}+1
+    </select>
+    
+</mapper>

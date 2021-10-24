@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 리뷰 이미지 정보 review_image_info 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.IReview_image_infoDao_IMember_reviewDao"> 
+
+	<!--*******************-->
+	<!--* 작업자 : 윤대호 *-->
+	<!--*******************-->
+	
+	<!-- 리뷰 상세 조회 -->
+	<select id="list" resultType="com.study.springboot.dto.Review_image_infoDto_Member_review_Dto"> 
+		SELECT * FROM review_image_info WHERE post_no=#{param1} ORDER BY image_no
+	</select>
+	
+	<!-- 리뷰 쓰기 액션 -->
+	<insert id="writeAction">
+		INSERT INTO member_review(post_no, post_content, post_date, user_id, product_code, review_score)
+			VALUES ( member_review_seq.nextval,#{param1},sysdate,#{param2},#{param3},#{param4})
+	</insert>
+	
+	<!-- 이미지정보 삽입 -->
+	<insert id="image_info">
+		INSERT INTO review_image_info(image_no, post_no, image_file_name) 
+			VALUES ( review_image_info_seq.nextval,#{param1},#{param2})
+	</insert>
+	
+	<!-- 글번호 가져오기-->
+	<select id="post_no" resultType="com.study.springboot.dto.Review_image_infoDto_Member_review_Dto">
+		SELECT p.post_no 
+			FROM (SELECT * FROM MEMBER_REVIEW ORDER BY POST_NO DESC) p 
+			WHERE p.user_id = #{param1} 
+			  AND ROWNUM = 1
+	</select>
+	
+	<!-- 이미지 번호 가져오기 -->
+	<select id="image_no" resultType="com.study.springboot.dto.Review_image_infoDto_Member_review_Dto">
+		SELECT image_file_name FROM review_image_info WHERE post_no = #{param1} POST_NO DESC
+	</select>
+	
+	<!-- 리뷰 수정 액션 -->
+	<update id="product_review_edit_action">
+		UPDATE member_review 
+			SET post_content=#{param1},
+				review_score=#{param4},
+				post_date=sysdate 
+			WHERE post_no=#{param2}
+			  AND user_id=#{param3}
+	</update>
+	
+</mapper>

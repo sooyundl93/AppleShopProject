@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 상품 정보 product_info AND member_review 조인 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.IProduct_and_reviewDao"> 
+	
+	<!--*******************-->
+	<!--* 작업자 : 김남권 *-->
+	<!--*******************-->
+	
+	<!-- 입고 최신순 8항목 리뷰 개수 & 점수 평균 조회 -->
+	<select id="new8ReviewList" resultType="com.study.springboot.dto.Product_and_reviewDto"> 		
+		SELECT TRUNC(NVL(r.a, 0),1) AS "average_review_score", 
+			   NVL(r.b, 0) AS "count_of_review"
+			FROM (SELECT product_code 
+				  	FROM product_info 
+				  	WHERE ROWNUM <![CDATA[<]]>= 8 
+				  	ORDER BY product_code DESC) p LEFT OUTER JOIN 
+				 (SELECT product_code, 
+				 		 AVG(review_score) as a, 
+				 		 COUNT(product_code) as b 
+				 	FROM member_review 
+				 	GROUP BY product_code) r on (p.product_code = r.product_code)
+			ORDER BY p.product_code DESC
+	</select>
+
+	<!-- 상품 단건 리뷰 개수 & 점수 평균 조회 -->
+	<select id = "product_score" resultType="com.study.springboot.dto.Product_and_reviewDto">
+		SELECT TRUNC(AVG(REVIEW_SCORE),1) AS "average_review_score",
+        	   COUNT(PRODUCT_CODE) AS "count_of_review"
+    		FROM MEMBER_REVIEW
+        	WHERE PRODUCT_CODE = #{param1}
+	</select>
+
+</mapper>

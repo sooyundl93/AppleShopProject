@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 주문 정보 order_info 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.IOrder_infoDao_IOrder_product_infoDao"> 
+
+	<!--*******************-->
+	<!--* 작업자 : 윤대호 *-->
+	<!--*******************-->
+	
+	<!-- 주문정보 보기 -->
+	<select id="content" resultType="com.study.springboot.dto.Order_infoDto_Order_product_infoDto">
+		SELECT * 
+			FROM order_info i left join 
+				 order_product_info p on (i.order_id = p.order_id) 
+			WHERE i.order_id=#{param1}
+	</select>
+	
+	<!-- 주문정보 기간검색 -->
+	<select id="listPageDao" resultType="com.study.springboot.dto.Order_infoDto_Order_product_infoDto">
+	 	SELECT *
+			FROM
+		    (
+		        SELECT ROW_NUMBER() OVER (ORDER BY i.order_id DESC) AS RNUM, 
+                       i.order_id, 
+                       p.order_id AS bNo,
+                       product_name,
+                       product_price,
+                       order_status,
+                       order_date,
+                       discounted_price,
+                       product_code,
+                       wrote_review_flag   
+	       			FROM
+			            (SELECT * FROM order_info) i,
+			            order_product_info p 
+		            WHERE p.order_id = i.order_id 
+		              AND user_id=#{param3} 
+		              AND order_date BETWEEN #{param4} AND #{param5}+1 
+	                ORDER BY order_id DESC
+		    )
+			WHERE RNUM BETWEEN #{param1} AND #{param2}
+    </select>
+    
+    <!-- 주문정보보기 -->
+    <select id="listPageDao2" resultType="com.study.springboot.dto.Order_infoDto_Order_product_infoDto">
+	 	SELECT *
+			FROM
+		    (
+		        SELECT ROW_NUMBER() OVER (ORDER BY i.order_id DESC) AS RNUM, 
+                       i.order_id, 
+                       p.order_id AS bNo,
+                       product_name,
+                       product_price,
+                       order_status,
+                       order_date,
+                       discounted_price,
+                       product_code,
+                       wrote_review_flag   
+	       			FROM
+			            (SELECT * FROM order_info) i,
+			            order_product_info p 
+		            WHERE p.order_id = i.order_id 
+		              AND user_id=#{param3} 
+		    )
+			WHERE RNUM BETWEEN #{param1} AND #{param2}
+    </select>
+	
+</mapper>

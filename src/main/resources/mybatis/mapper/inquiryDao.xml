@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.study.springboot.dao.IInquiryDao"> 
+
+    <!--##############################-->
+    <!--#                            #-->
+    <!--#         작업자: 심준엽     #-->
+    <!--#                            #-->
+    <!--##############################-->
+  
+    <!-- ########## 회원의 문의 글 건수 ########## -->
+    <select id="countOfrecords" resultType="int">
+		SELECT COUNT(user_id)
+		    FROM ${table}
+		    WHERE user_id = #{user_id}
+    </select>
+    
+    <!-- ########## 회원의 답글을 받지 못한 문의 글의 건수 ########## -->
+    <select id="countOfUnrepliedInquiries" resultType="int">
+        SELECT COUNT(number_of_replies)
+            FROM ${inquiry_table}
+            WHERE user_id = #{user_id} 
+              AND number_of_replies = 0
+    </select>
+    
+    <!-- ########## 레코드 수 ########## -->
+    <select id="countRecords" resultType="int">
+        SELECT count( inquiry_no ) 
+            FROM ${ table_name }
+        <include refid="search" />
+        <include refid="date_interval" />
+    </select>
+    
+    <!-- ########## 목록 생성 ########## -->
+    <select id="relationInstance" resultType="com.study.springboot.dto.InquiryDto">
+        SELECT *
+            FROM (
+	            SELECT ROW_NUMBER() OVER(ORDER by ${ sortRecords }, inquiry_no DESC) AS
+	                row_num,
+							    <foreach collection="column_array" item="column" separator=",">
+							        ${ column }
+							    </foreach>
+	            FROM ${ table_name }
+	            <include refid="search" />
+	            <include refid="date_interval" />
+	            )
+            WHERE row_num BETWEEN #{ firstRecordIndex } AND #{ lastRecordIndex }
+    </select>
+    
+    <!-- ########## 검색 및 페이징 옵션 ########## -->
+    <sql id="search">
+        <choose>
+            <when test="current_option == 'all' ">
+                WHERE
+	                  <foreach collection="all_search_options" item="search_option" open="(" separator="OR" close=")">
+	                     LOWER( ${ search_option } ) LIKE '%' || #{ current_keyword } || '%'
+	                  </foreach>
+            </when>
+            <otherwise>
+                WHERE LOWER( ${ current_option } ) LIKE '%' || #{ current_keyword } || '%'
+            </otherwise>
+        </choose>
+    </sql>
+    
+    <!-- ########## 날짜 간격 검색 옵션 ########## -->
+    <sql id="date_interval">
+        AND inquiry_date 
+            BETWEEN TO_DATE( #{ from_this_date }, 'YYYY-MM-DD' ) 
+            AND TO_DATE( #{ to_this_date }, 'YYYY-MM-DD' ) + 1
+    </sql>
+    
+    <!-- ########## 답글 수 저장 ########## -->
+    <update id="UpdateNumberOfReplies">
+	    UPDATE ${ table_name } SET number_of_replies = #{ number_of_records }
+	        WHERE inquiry_no = #{ index }
+    </update>
+</mapper>

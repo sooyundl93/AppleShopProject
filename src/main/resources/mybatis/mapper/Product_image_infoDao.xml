@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 상품 이미지 정보 product_image_info 테이블 xml -->
+
+<mapper namespace="com.study.springboot.dao.IProduct_image_infoDao"> 
+
+	<!--*******************-->
+	<!--* 작업자 : 김남권 *-->
+	<!--*******************-->
+	
+	<!-- 상품 상세정보 이미지 조회(상품 코드) -->
+	<select id="product_image" resultType="com.study.springboot.dto.Product_image_infoDto"> 
+		SELECT * 
+			FROM PRODUCT_IMAGE_INFO 
+				WHERE PRODUCT_CODE = #{param1}  
+				ORDER BY IMAGE_NO
+	</select>
+	
+	<!-- 상품 상세정보 이미지 1장 조회(상품 코드) -->
+	<select id="product_image_one" resultType="com.study.springboot.dto.Product_image_infoDto"> 
+		SELECT * 
+			FROM PRODUCT_IMAGE_INFO 
+				WHERE   PRODUCT_CODE = #{param1}
+					AND ROWNUM = 1  
+				ORDER BY IMAGE_NO
+	</select>
+	
+	<!-- 주문 완료 폼 이미지 조회 -->
+	<select id="order_success_image" resultType="com.study.springboot.dto.Product_image_infoDto">
+		SELECT *
+			FROM (SELECT * 
+				  		FROM PRODUCT_IMAGE_INFO
+				  		WHERE ${query}
+				  		ORDER BY image_no)
+			WHERE MOD(image_no, 2) = 1
+	</select>
+	
+	<!-- 관리자페이지 : 상품 이미지 추가 -->
+	<insert id="add_product_image">
+		INSERT INTO product_image_info(image_no, product_code, image_file_name) 
+			VALUES ( product_image_info_seq.nextval,#{product_code},#{image_file_name})
+	</insert>
+	
+	<!-- 상품 이미지 업데이트를 위한 이미지 번호 GET -->
+	<select id="get_image_no" resultType="int">
+		SELECT image_no
+			FROM product_image_info
+			WHERE product_code = #{product_code}
+			ORDER BY image_no ASC
+	</select>
+	
+	<!-- 상품 이미지 업데이트 -->
+	<update id="update_product_image">
+		UPDATE product_image_info
+			SET image_file_name = #{image_file_name}
+			WHERE image_no = #{image_no}
+	</update>
+
+</mapper>

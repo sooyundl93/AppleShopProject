@@ -1,0 +1,1205 @@
+--system 사용자로 접속해서 아래 명령어들을 실행한다.
+--사용자 생성 및 권한 부여
+CREATE USER tmr_db
+IDENTIFIED BY 1234
+DEFAULT TABLESPACE USERS
+TEMPORARY TABLESPACE TEMP;
+​
+GRANT CONNECT TO tmr_db;
+GRANT RESOURCE TO tmr_db;
+GRANT DBA TO tmr_db;
+​
+--tmr_db 데이터베이스(사용자) 생성 완료.
+COMMIT;
+
+
+-- #####################################################################################
+-- ################################# 테이블 CREATE######################################
+-- #####################################################################################
+
+-- ############################# 사용자 정보 테이블 CREATE #############################
+CREATE TABLE member_info (
+    user_id VARCHAR2(40) PRIMARY KEY, --사용자 식별자
+    user_password VARCHAR2(256) NOT NULL, --비밀번호 
+    user_name VARCHAR2(20) NOT NULL, --이름
+    birthday DATE NOT NULL, --생년월일
+    email VARCHAR2(50) NOT NULL, --이메일
+    receive_email_flag CHAR NOT NULL, --이메일 수신여부
+    phone_number VARCHAR2(11) NOT NULL, --연락처
+    receive_messages_flag CHAR NOT NULL, --문자 수신여부
+    postal_code NUMBER(5) NOT NULL, --우편번호
+    address VARCHAR2(50) NOT NULL, --주소
+    detailed_address VARCHAR2(50) NOT NULL, --상세주소
+    pw_question NUMBER(2), --비밀번호 질문
+    pw_answer VARCHAR2(200), --비밀번호 질문 답
+    member_since DATE DEFAULT SYSDATE, --가입일
+    user_role VARCHAR2(20) DEFAULT 'ROLE_TEMPORARY_USER', --사용자 권한
+    mileage NUMBER (10) DEFAULT 0, --보유한 마일리지
+    number_of_visits NUMBER(8) DEFAULT 0, --일일 방문 횟수
+    
+    CONSTRAINT pw_question_check CHECK(pw_question BETWEEN 1 AND 10),
+    CONSTRAINT receive_email_flag_check CHECK(receive_email_flag IN('Y', 'N')),
+    CONSTRAINT receive_messages_flag_check CHECK(receive_messages_flag IN('Y', 'N')),
+    CONSTRAINT manager_flag_check CHECK(manager_flag IN('ROLE_ADMIN', 'ROLE_USER', 'ROLE_TEMPORARY_USER'))
+);
+
+-- ############################# 상품 정보 테이블 ###############################
+CREATE TABLE product_info (
+    product_code CHAR(6) PRIMARY KEY, --상품 식별코드
+    product_name VARCHAR2(100) NOT NULL, --상품이름
+    parent_category VARCHAR2(30) NOT NULL, --상위 카테고리
+    child_category VARCHAR2(30) NOT NULL, --하위 카테고리
+    added_date DATE DEFAULT SYSDATE, --상품이 추가된 날짜
+    manufacturer VARCHAR2(30) NOT NULL, --제조사
+    product_price NUMBER(10) NOT NULL, --상품가격
+    product_description VARCHAR2(3000), --상품설명
+    number_of_sales NUMBER(8) DEFAULT 0, --판매된 수량
+    
+    CONSTRAINT parent_category_check 
+        CHECK(parent_category 
+        IN('거실', '주방', '침실', '서재', '인테리어', '미분류')),
+    CONSTRAINT child_category_check 
+        CHECK(child_category 
+        IN('쇼파', '테이블', '의자', '수납장', '침대', '화장대', '책상', '책장', '미분류'))
+);
+
+-- ############################# 장바구니 테이블 ################################
+CREATE TABLE shopping_cart (
+    item_no NUMBER(8) PRIMARY KEY, --장바구니 품목 식별번호
+    user_id VARCHAR2(40) NOT NULL, --사용자 식별자
+    product_code CHAR(6) NOT NULL, --상품 식별코드
+    number_of_products NUMBER(2) NOT NULL, --담은 개수
+    
+    CONSTRAINT shopping_user_id_fk FOREIGN KEY(user_id)
+        REFERENCES member_info(user_id) ON DELETE CASCADE,
+    CONSTRAINT shopping_product_code_fk FOREIGN KEY(product_code)
+        REFERENCES product_info(product_code) ON DELETE CASCADE
+);
+
+-- ############################# 주문 정보 테이블 ################################
+CREATE TABLE order_info (
+    order_id CHAR(11) PRIMARY KEY, --주문 정보 식별자(날마다 시퀸스 초기화하는 프로시저 필요)
+    user_id VARCHAR2(40) NOT NULL, --사용자 식별자
+    order_date DATE DEFAULT SYSDATE, --주문날짜
+    recipient_name VARCHAR2(20) NOT NULL, --수령인
+    phone_number VARCHAR2(11) NOT NULL, --연락처
+    postal_code NUMBER(5) NOT NULL, --우편번호
+    address VARCHAR2(50) NOT NULL, --주소
+    detailed_address VARCHAR2(50) NOT NULL, --상세주소
+    shipping_memo VARCHAR2(200), --배송메모
+    total_price NUMBER(10) NOT NULL, --총 금액
+    used_mileage NUMBER(10) NOT NULL, --사용한 마일리지 
+    discounted_price NUMBER(10) NOT NULL, --할인된 금액
+    shipping_cost NUMBER(10) NOT NULL, --배송비용
+    payment_method NUMBER(2) NOT NULL, --결제수단
+    payment_id VARCHAR2(50), --결제 고유 번호
+    accrued_mileage NUMBER(10) NOT NULL, --적립된 마일리지
+    order_status NUMBER(2) DEFAULT 1, --주문상태
+    wrote_review_flag CHAR DEFAULT 'N', --리뷰작성여부
+    
+    CONSTRAINT discounted_price_check CHECK (discounted_price = total_price - used_mileage),
+    CONSTRAINT payment_method_check CHECK (payment_method BETWEEN 1 AND 3),
+    CONSTRAINT accrued_mileage_check CHECK (accrued_mileage = discounted_price * 0.05),
+    CONSTRAINT order_status_check CHECK (order_status BETWEEN 1 AND 6),
+    CONSTRAINT wrote_review_flag_check CHECK(wrote_review_flag IN('Y', 'N'))
+);
+
+-- ############################# 주문 상품 정보 테이블 ###########################
+CREATE TABLE order_product_info (
+    item_no NUMBER(8) PRIMARY KEY, --주문한 품목 식별번호
+    order_id CHAR(11) NOT NULL, --주문 식별자
+    product_code CHAR(6) NOT NULL, --상품 식별코드
+    product_name VARCHAR2(100) NOT NULL, --주문한 상품이름
+    parent_category VARCHAR2(30) NOT NULL, --상위 카테고리
+    child_category VARCHAR2(30) NOT NULL, --하위 카테고리
+    manufacturer VARCHAR2(30) NOT NULL, --제조사
+    product_price NUMBER(10) NOT NULL, --주문한 상품 가격
+    number_of_orders NUMBER(3) NOT NULL, --주문 개수
+    
+    CONSTRAINT order_id_fk FOREIGN KEY(order_id)
+        REFERENCES order_info(order_id) ON DELETE CASCADE
+);
+
+-- ############################# 회원 상품 리뷰 테이블 ###########################
+CREATE TABLE member_review (
+    post_no NUMBER(8) PRIMARY KEY, --회원 리뷰 글 식별번호
+    product_code CHAR(6) NOT NULL, --상품 식별코드
+    user_id VARCHAR2(40) NOT NULL, --리뷰 쓴 사용자 식별자
+    review_score NUMBER(2, 1) NOT NULL, --별점 0.0 ~ 5.0
+    post_date DATE DEFAULT SYSDATE, --작성날짜
+    post_content VARCHAR2(1500) NOT NULL, --리뷰내용
+    
+    CONSTRAINT review_user_id_pk FOREIGN KEY(user_id)
+        REFERENCES member_info(user_id) ON DELETE CASCADE,
+    CONSTRAINT review_score_check CHECK (review_score BETWEEN 0.5 AND 5.0)
+);
+
+-- ############################# 공지사항 테이블 ################################
+CREATE TABLE notice (
+    post_no NUMBER(8) PRIMARY KEY, --공지사항 글 식별번호
+    user_id VARCHAR2(40) NOT NULL, --글을 쓴 관리자 식별자
+    post_title VARCHAR2(50) NOT NULL, --글 제목
+    post_content VARCHAR2(3000) NOT NULL, --글 내용
+    post_date DATE DEFAULT SYSDATE, --작성한 날짜
+    post_hits NUMBER(10) DEFAULT 0, --글 조회수
+    important_flag CHAR DEFAULT 'N', --중요 공지 플래그
+    
+    CONSTRAINT important_flag_check CHECK (important_flag IN('Y', 'N'))
+);
+
+-- ############################# 상품 이미지 정보 테이블 #########################
+CREATE TABLE product_image_info (
+    image_no NUMBER(8) PRIMARY KEY, --이미지 식별번호
+    product_code CHAR(6) NOT NULL, --이미지가 업로드 된 상품의 식별코드
+    image_file_name VARCHAR2(300) NOT NULL, --이미지 파일 명
+    
+    CONSTRAINT product_no_fk FOREIGN KEY(product_code)
+        REFERENCES product_info(product_code) ON DELETE CASCADE
+);
+
+-- ############################# 회원 리뷰 이미지 정보 테이블 #####################
+CREATE TABLE review_image_info (
+    image_no NUMBER(8) PRIMARY KEY, --이미지 식별번호
+    post_no NUMBER(8) NOT NULL, --이미지가 업로드 된 글의 식별자
+    image_file_name VARCHAR2(300) NOT NULL, --이미지 파일 명
+    
+    CONSTRAINT review_post_no_fk FOREIGN KEY(post_no)
+        REFERENCES member_review(post_no) ON DELETE CASCADE
+);
+
+-- ############################# 공지사항 이미지 정보 테이블 ######################
+CREATE TABLE notice_image_info (
+    image_no NUMBER(8) PRIMARY KEY, --이미지 식별번호
+    post_no NUMBER(8) NOT NULL, --이미지가 업로드 된 글의 식별자
+    image_file_name VARCHAR2(300) NOT NULL, --이미지 파일 명
+    
+    CONSTRAINT notice_post_no_fk FOREIGN KEY(post_no)
+        REFERENCES notice(post_no) ON DELETE CASCADE
+);
+
+-- ############################# 상품 문의 글 테이블 #############################
+CREATE TABLE product_inquiry (
+    inquiry_no NUMBER(8) PRIMARY KEY, --문의글 식별번호
+    product_code CHAR(6), --상품 식별코드
+    user_id VARCHAR2(40)NOT NULL, --글을 쓴 사용자 식별자
+    inquiry_content VARCHAR2(3000) NOT NULL, --문의내용
+    private_flag CHAR NOT NULL, --비공개 설정 여부
+    inquiry_date DATE DEFAULT SYSDATE, --작성날짜
+    number_of_replies NUMBER(2) DEFAULT 0, --답변 받은 횟수
+    
+    CONSTRAINT product_inquiry_user_id_fk FOREIGN KEY(user_id)
+        REFERENCES member_info(user_id) ON DELETE CASCADE
+);
+
+-- ############################# 1:1 문의 글 테이블 #############################
+CREATE TABLE one2one_inquiry (
+    inquiry_no NUMBER(8) PRIMARY KEY, --문의글 식별번호
+    user_id VARCHAR2(40) NOT NULL, --글을 쓴 사용자 식별자
+    inquiry_title VARCHAR2(50) NOT NULL, --글 제목
+    inquiry_content VARCHAR2(3000) NOT NULL, --문의내용
+    inquiry_date DATE DEFAULT SYSDATE, --작성날짜
+    number_of_replies NUMBER(2) DEFAULT 0, --답변 받은 횟수
+
+    CONSTRAINT one2one_inquiry_user_id_fk FOREIGN KEY(user_id)
+        REFERENCES member_info(user_id) ON DELETE CASCADE
+);
+
+-- ############################# 상품 문의 답글 테이블 ##########################
+CREATE TABLE product_inquiry_reply (
+    reply_no NUMBER(8) PRIMARY KEY, --답글 식별번호
+    inquiry_no NUMBER(8) NOT NULL, --문의글 식별번호
+    user_id VARCHAR2(40) NOT NULL, --글을 쓴 관리자 식별자
+    reply_content VARCHAR2(3000) NOT NULL, --답변 내용
+    reply_date DATE DEFAULT SYSDATE, --작성날짜
+    
+    CONSTRAINT product_inquiry_no_fk FOREIGN KEY(inquiry_no)
+        REFERENCES product_inquiry(inquiry_no) ON DELETE CASCADE
+);
+
+-- ############################# 1:1 문의 답글 테이블 ###########################
+CREATE TABLE one2one_inquiry_reply (
+    reply_no NUMBER(8) PRIMARY KEY, --답글 식별번호
+    inquiry_no NUMBER(8) NOT NULL, --문의글 식별번호
+    user_id VARCHAR2(40) NOT NULL, --글을 쓴 관리자 식별자
+    reply_content VARCHAR2(3000) NOT NULL, --답변 내용
+    reply_date DATE DEFAULT SYSDATE, --작성날짜
+    
+    CONSTRAINT one2one_inquiry_no_fk FOREIGN KEY(inquiry_no)
+        REFERENCES one2one_inquiry(inquiry_no) ON DELETE CASCADE
+);
+
+
+
+
+-- #####################################################################################
+-- ################################# 시퀀스 CREATE######################################
+-- #####################################################################################
+
+
+-- $$$$$$$$$$$$$$$$$$$$$$$$$$$$$ 상품 정보 시퀸스 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+CREATE SEQUENCE product_info_seq
+    START WITH 1
+    INCREMENT BY 1
+    MAXVALUE 99999;
+
+-- $$$$$$$$$$$$$$$$$$$$$$$$$$$$$ 장바구니 시퀸스 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+CREATE SEQUENCE shopping_cart_seq
+    START WITH 1
+    INCREMENT BY 1
+    MAXVALUE 99999999;
+
+-- $$$$$$$$$$$$$$$$$$$$$$$$$$$$$ 주문 정보 시퀸스 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+CREATE SEQUENCE order_info_seq
+    START WITH 1
+    INCREMENT BY 1
+    MAXVALUE 999;
+    
+-- $$$$$$$$$$$$$$$$$$$$$$$$$$$$$ 주문 상품 시퀸스 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+CREATE SEQUENCE order_product_info_seq
+    START WITH 1
+    INCREMENT BY 1
+    MAXVALUE 99999999;
+
+-- $$$$$$$$$$$$$$$$$$$$$$$$$$$$$ 회원 상품 리뷰 시퀸스 $$$$$$$$$$$$$$$$$$$$$$$$$$$
+CREATE SEQUENCE member_review_seq
+    START WITH 1
+    INCREMENT BY 1
+    MAXVALUE 99999999;
+    
+-- $$$$$$$$$$$$$$$$$$$$$$$$$$$$$ 공지사항 시퀸스 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+CREATE SEQUENCE notice_seq
+    START WITH 1
+    INCREMENT BY 1
+    MAXVALUE 99999999;
+
+-- $$$$$$$$$$$$$$$$$$$$$$$$$$$$$ 상품 이미지 정보 시퀸스 $$$$$$$$$$$$$$$$$$$$$$$$$
+CREATE SEQUENCE product_image_info_seq
+    START WITH 1
+    INCREMENT BY 1
+    MAXVALUE 99999999;
+    
+-- $$$$$$$$$$$$$$$$$$$$$$$$$$$$$ 회원 리뷰 이미지 정보 시퀸스 $$$$$$$$$$$$$$$$$$$$
+CREATE SEQUENCE review_image_info_seq
+    START WITH 1
+    INCREMENT BY 1
+    MAXVALUE 99999999;
+    
+-- $$$$$$$$$$$$$$$$$$$$$$$$$$$$$ 공지 이미지 정보 시퀸스 $$$$$$$$$$$$$$$$$$$$$$$$$
+CREATE SEQUENCE notice_image_info_seq
+    START WITH 1
+    INCREMENT BY 1
+    MAXVALUE 99999999;
+
+-- $$$$$$$$$$$$$$$$$$$$$$$$$$$$$ 상품 문의 글 시퀸스 $$$$$$$$$$$$$$$$$$$$$$$$$$$$
+CREATE SEQUENCE product_inquiry_seq
+    START WITH 1
+    INCREMENT BY 1
+    MAXVALUE 99999999;
+    
+-- $$$$$$$$$$$$$$$$$$$$$$$$$$$$$ 1:1 문의 글 시퀸스 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+CREATE SEQUENCE one2one_inquiry_seq
+    START WITH 1
+    INCREMENT BY 1
+    MAXVALUE 99999999;
+    
+-- $$$$$$$$$$$$$$$$$$$$$$$$$$$$$ 문의 답변 글 시퀸스 $$$$$$$$$$$$$$$$$$$$$$$$$$$$
+CREATE SEQUENCE product_inquiry_reply_seq
+    START WITH 1
+    INCREMENT BY 1
+    MAXVALUE 99999999;
+    
+-- $$$$$$$$$$$$$$$$$$$$$$$$$$$$$ 문의 답변 글 시퀸스 $$$$$$$$$$$$$$$$$$$$$$$$$$$$
+CREATE SEQUENCE one2one_inquiry_reply_seq
+    START WITH 1
+    INCREMENT BY 1
+    MAXVALUE 99999999;
+    
+    
+
+
+-- #####################################################################################
+-- ################################### 데이터 DML ######################################
+-- #####################################################################################
+
+
+-- ***************************** 사용자 정보 DML *******************************
+-- 사용자 계정 추가
+INSERT INTO member_info(user_id, user_password, user_name, gender, birthday, 
+                        email, receive_email_flag, phone_number, receive_messages_flag, 
+                        postal_code, address, detailed_address, pw_question, pw_answer, user_role)
+    VALUES('ADMIN_001', '28267e71f6714a089dd2d79f2b6479426df4db79be41018244b43a6abe1e324e', '관리자1', '남', '1990-08-15',
+            'tmrhome@tmrhome.com', 'N', '16880000', 'N',
+            '11215', '서울특별시 노원구 상계로 64', '401호', '01', '내일의집', 'ROLE_ADMIN');
+
+INSERT INTO member_info(user_id, user_password, user_name, gender, birthday, 
+                        email, receive_email_flag, phone_number, receive_messages_flag, 
+                        postal_code, address, detailed_address, pw_question, pw_answer, user_role)
+    VALUES('joonYeop', '914420a9b210195dea7e8a1fdc5234fb1f413c04dba3b5eaabed9df6adb47f51', '심준엽', '남', '1994-08-03',
+            'tlawnsduq@gmail.com', 'Y', '01092284907', 'Y',
+            '01695', '서울특별시 노원구 상계동 617', '화랑빌딩 4층 401호', '02', '콘택트', 'ROLE_USER');
+        
+INSERT INTO member_info(user_id, user_password, user_name, gender, birthday, 
+                        email, receive_email_flag, phone_number, receive_messages_flag, 
+                        postal_code, address, detailed_address, pw_question, pw_answer, user_role)
+    VALUES('gildong2', '914420a9b210195dea7e8a1fdc5234fb1f413c04dba3b5eaabed9df6adb47f51', '홍길동', '남', '1990-08-15',
+            'gildong2@naver.com', 'N', '01099875756', 'Y',
+            '01690', '서울특별시 노원구 중계동 17', '301호', '03', '초코', 'ROLE_USER');
+
+INSERT INTO member_info(user_id, user_password, user_name, gender, birthday, 
+                        email, receive_email_flag, phone_number, receive_messages_flag, 
+                        postal_code, address, detailed_address, pw_question, pw_answer, user_role)
+    VALUES('jiae0521', '914420a9b210195dea7e8a1fdc5234fb1f413c04dba3b5eaabed9df6adb47f51', '유지애', '여', '1993-05-21',
+            'jiae0521@gmail.com', 'Y', '01085442756', 'N',
+            '01645', '서울특별시 노원구 하계동 521', '주공아파트 1101호', '02', '말할수 없는 비밀', 'ROLE_USER');
+        
+INSERT INTO member_info(user_id, user_password, user_name, gender, birthday, 
+                        email, receive_email_flag, phone_number, receive_messages_flag, 
+                        postal_code, address, detailed_address, pw_question, pw_answer, user_role)
+    VALUES('ironking11', '914420a9b210195dea7e8a1fdc5234fb1f413c04dba3b5eaabed9df6adb47f51', '조철왕', '남', '1962-11-05',
+            'ironking11@nate.com', 'N', '01074541975', 'N',
+            '01616', '서울특별시 강북구 미아동 241', '현대아파트 3단지 106호', '04', '아버지', 'ROLE_USER');
+        
+INSERT INTO member_info(user_id, user_password, user_name, gender, birthday, 
+                        email, receive_email_flag, phone_number, receive_messages_flag, 
+                        postal_code, address, detailed_address, pw_question, pw_answer, user_role)
+    VALUES('hmson7', '914420a9b210195dea7e8a1fdc5234fb1f413c04dba3b5eaabed9df6adb47f51', '손흥민', '남', '1992-07-08',
+            'hmson7@gmail.com', 'N', '01041157845', 'N',
+            '01120', '서울특별시 강남구 논현동 15', '65-1', '06', '부안초등학교', 'ROLE_USER');
+        
+INSERT INTO member_info(user_id, user_password, user_name, gender, birthday, 
+                        email, receive_email_flag, phone_number, receive_messages_flag, 
+                        postal_code, address, detailed_address, pw_question, pw_answer, user_role)
+    VALUES('queenyuna', '914420a9b210195dea7e8a1fdc5234fb1f413c04dba3b5eaabed9df6adb47f51', '김연아', '여', '1990-09-05',
+            'yuna0905@naver.com', 'Y', '01077094653', 'Y',
+            '01322', '경기도 군포시 수리산로 48', '6-7 401호', '07', '수리고등학교', 'ROLE_USER');
+
+INSERT INTO member_info(user_id, user_password, user_name, gender, birthday, 
+                        email, receive_email_flag, phone_number, receive_messages_flag, 
+                        postal_code, address, detailed_address, pw_question, pw_answer, user_role)
+    VALUES('bigcristal', '914420a9b210195dea7e8a1fdc5234fb1f413c04dba3b5eaabed9df6adb47f51', '이수정', '여', '1992-07-06',
+            'bigcristal@gmail.com', 'N', '01073780706', 'N',
+            '16445', '광주광역시 남구 천변좌로 604번길 12', '202호', '07', '설월여자고등학교', 'ROLE_USER');
+
+INSERT INTO member_info(user_id, user_password, user_name, gender, birthday, 
+                        email, receive_email_flag, phone_number, receive_messages_flag, 
+                        postal_code, address, detailed_address, pw_question, pw_answer, user_role)
+    VALUES('hatihatiho', '914420a9b210195dea7e8a1fdc5234fb1f413c04dba3b5eaabed9df6adb47f51', '서지수', '여', '1994-02-11',
+            'jisu0211@nate.com', 'N', '01022310211', 'Y',
+            '06552', '인천광역시 계양구 장제로 966', '403호', '07', '인천세원고등학교', 'ROLE_USER');
+
+INSERT INTO member_info(user_id, user_password, user_name, gender, birthday, 
+                        email, receive_email_flag, phone_number, receive_messages_flag, 
+                        postal_code, address, detailed_address, pw_question, pw_answer, user_role)
+    VALUES('miju0923', '914420a9b210195dea7e8a1fdc5234fb1f413c04dba3b5eaabed9df6adb47f51', '이미주', '여', '1994-09-23',
+            'miju0923@naver.com', 'Y', '01065650923', 'Y',
+            '24454', '충청북도 옥천군 옥천읍 문정리 455-2', '16-24호', '07', '옥천상업고등학교', 'ROLE_USER');
+
+INSERT INTO member_info(user_id, user_password, user_name, gender, birthday, 
+                        email, receive_email_flag, phone_number, receive_messages_flag, 
+                        postal_code, address, detailed_address, pw_question, pw_answer, user_role)
+    VALUES('jiyeoni', '914420a9b210195dea7e8a1fdc5234fb1f413c04dba3b5eaabed9df6adb47f51', '김지연', '여', '1995-03-20',
+            'jiyeoni@naver.com', 'Y', '01023480320', 'Y',
+            '13552', '인천광역시 부평구 체육관로 179', '11호', '07', '인천영선고등학교', 'ROLE_USER');
+
+INSERT INTO member_info(user_id, user_password, user_name, gender, birthday, 
+                        email, receive_email_flag, phone_number, receive_messages_flag, 
+                        postal_code, address, detailed_address, pw_question, pw_answer, user_role)
+    VALUES('tekenjin', '914420a9b210195dea7e8a1fdc5234fb1f413c04dba3b5eaabed9df6adb47f51', '박명은', '여', '1996-06-12',
+            'tekenjin@gmail.com', 'Y', '01036840612', 'N',
+            '13445', '서울특별시 성동구 무학로6길 41', '1108호', '01', '러블리즈', 'ROLE_USER');
+
+INSERT INTO member_info(user_id, user_password, user_name, gender, birthday, 
+                        email, receive_email_flag, phone_number, receive_messages_flag, 
+                        postal_code, address, detailed_address, pw_question, pw_answer, user_role)
+    VALUES('smallcristal', '914420a9b210195dea7e8a1fdc5234fb1f413c04dba3b5eaabed9df6adb47f51', '류수정', '여', '1997-11-19',
+            'smallcristal@gmail.com', 'N', '01086651119', 'N',
+            '11512', '대전광역시 유성구 용산2로 2-16', '1401호', '02', '마틸다', 'ROLE_USER');
+
+INSERT INTO member_info(user_id, user_password, user_name, gender, birthday, 
+                        email, receive_email_flag, phone_number, receive_messages_flag, 
+                        postal_code, address, detailed_address, pw_question, pw_answer, user_role)
+    VALUES('flowerdeer', '914420a9b210195dea7e8a1fdc5234fb1f413c04dba3b5eaabed9df6adb47f51', '정예인', '여', '1998-06-04',
+            'flowerdeer@gmail.com', 'Y', '01019440604', 'Y',
+            '14842', '인천광역시 부평구 수변로 199', '05-1호', '02', '나는내일어제의너와만난다', 'ROLE_USER');
+
+-- ***************************** 상품 정보 DML *********************************
+-- 상품 추가
+
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '가죽쇼파', '거실', '쇼파', '내일공방', '139000', '10000', 
+            '내일공방에서 최고급 가죽으로 만든 가죽쇼파입니다.');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '사각테이블', '거실', '테이블', '이케아', '88000', '5000', 
+            '이케아에서 만든 DIY 사각 테이블입니다.');
+
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '4인 원목 식탁', '주방', '테이블', '동서가구', '99000', '3000', 
+            '주방의 분위기를 한층 더 부드럽게 해주는 4인용 원목 식탁입니다.');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '원목 식탁 의자', '주방', '의자', '동서가구', '31000', '3000', 
+            '4인 원목 식탁과 세트로 기획된 원목 의자입니다.');
+
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '아이보리 주방 수납장', '주방', '수납장', '내일공방', '48000', '3000', 
+            '아이보리 색으로 따뜻한 분위기를 주는 주방 수납장입니다. 전자렌지, 전기 밥솥등 수납이 가능합니다.');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '원목 프레임 침대', '침실', '침대', '에이스', '329000', '20000', 
+            '침대 명가 에이스에서 만든 King사이즈 원목 프레임 침대입니다.');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '미니 테이블', '침실', '수납장', '동서가구', '35000', '3000', 
+            '탁상시계와 조명을 올려놓을 수 있는 미니 테이블입니다. 인테리어와 실용성을 동시에 잡아보세요!');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '심플릭 화장대', '침실', '화장대', '내일공방', '68000', '3000', 
+            '화장하는 기분도 중요하겠죠, 화이트로 깔끔한 분위기를 더한 방에서 아늑한 기분으로 완벽한 하루를 시작해보시는건 어떨까요?');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '메탈릭 프레임 책상', '서재', '책상', '이케아', '48500', '5000', 
+            '메탈소재의 프레임으로 견고하게 지지해주면서 책상 부분은 오동나무를 사용해 실용성과 디자인을 모두 챙겼습니다.
+            자세한 설명으로 쉽게 설치해보세요');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '호두나무 2층 책장', '서재', '책장', '내일공방', '29900', '5000', 
+            '호두나무로 만든 책장입니다, 2층 구성으로 공간을 많이 잡아먹지 않으면서 책장 높이가 높아 다양한 책을 수납할 수 있습니다.');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            'Pink Sands 향초', '인테리어', '미분류', 'Yankeecandle', '39000', '3000', 
+            '바하마의 핑크샌드 해변의 작은 조각의 조개들이 모래와 섞여 핑크색으로 보이는 것이 아름다운 열대의 이국적인 향취로 바쁜 일상에서 잠시 휴식을 취할 수 있는 향입니다.');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            'Black Cherry 디퓨저', '인테리어', '미분류', 'cocodor', '20000', '3000', 
+            '잘 익은 블랙체리를 푹 절여 만든 잼을 식빵위에 발라 사랑하는 이에게 전달할 때의 설레임을 닮은 향.');
+
+-- section 2
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '3인 가죽쇼파', '거실', '쇼파', '내일공방', '129000', '10000', 
+            '3인 가죽쇼파입니다. 확장성이 좋은 스톨도 상품에 포함됩니다.');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '피톤치드 편백 테이블', '거실', '테이블', '동서가구', '93000', '5000', 
+            '편백나무로 제작되어 은은한 향을 거실에 채워줄 피톤치드 편백 테이블입니다. 숲속의 향기를 거실에서 느껴보세요!');
+
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '하이 그로시 테이블 세트', '주방', '테이블', '내일공방', '118000', '10000', 
+            '미니멀한 주방에 어울리는 2인/4인 그로시 테이블 세트입니다. 본 세트에는 의자 2개가 함께 배송됩니다.');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '카페 의자 2개 세트', '주방', '의자', '내일공방', '59000', '3000', 
+            '내일공방에서 만든 카페 의자 세트로 주방과 발코니에서 카페의 분위기를 만끽하세요! 커피와 함께 여유로운 시간을 보내볼까요?');
+
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '화이트 렌지대', '주방', '수납장', '동서가구', '68000', '5000', 
+            '깔끔한 주방을 위해서는 정리가 필수겠죠? 그래서 준비했습니다. 미니멀한 렌지대로 공간은 적게 차지하면서 효율적으로 정리를 해보는건 어떨까요?');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '내추럴 수납헤드 침대', '침실', '침대', '동서가구', '289000', '20000', 
+            '우리 아이 첫침대, 아무거나 해줄수는 없죠, 동서가구에서 야심차게 출시한 수납장 프레임과 머리맡에 추가 수납 공간을 이용해 예쁘고 편한 침실을 선물해주세요!');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '우드 5층 수납장', '침실', '수납장', '까사미아', '75000', '5000', 
+            '깔끔한 수납장에 단정히 개어진 옷들이 들어있으면 외출 전부터 설렘을 느끼죠. 모던함과 편의를 동시에 챙겨보세요.');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '모던 수납 화장대', '침실', '화장대', '내일공방', '79000', '5000', 
+            '화장대는 예쁜것도 중요하지만 필요한게 손에 바로바로 잡히면 삶이 얼마나 더 편해질까요? 모던 수납 화장대와 함께라면 뭔가를 찾기위해 서랍을 계속 열어봐야할 필요가 없어집니다.');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '콰트로 책상', '서재', '책상', '두닷', '80500', '5000', 
+            '두닷가구의 국민 책상 콰트로입니다. DIY가 어려우면 다신 하고싶지 않으시죠? 콰트로 책상은 쉽고 간편하게 설치가 가능합니다.');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '파티션 책장', '서재', '책장', 'JAJU', '68900', '5000', 
+            '어느 공간에도 잘 어울리는 JAJU 파티션 책장입니다. 원목 느낌을 그대로 살려 클래식한 분위기를 연출합니다.');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '전신 거울', '인테리어', '미분류', '내일공방', '49000', '3000', 
+            '외출전 완벽한 내 모습을 다시 한번 체크! 전신거울입니다.');
+        
+INSERT INTO product_info(product_code, product_name, parent_category, child_category, 
+                        manufacturer, product_price, shipping_cost, product_description)
+    VALUES( 'P' || lpad(product_info_seq.NEXTVAL, 5, '0'),
+            '보들보들 러그', '인테리어', '미분류', 'cocodor', '51000', '3000', 
+            '매일 걷는 우리집 바닥에 따뜻함과 뽀송뽀송함을 느껴보고싶다면 바로 주문하세요.');
+
+-- ***************************** 장바구니 DML ***********************************
+-- 장바구니에 품목 추가
+INSERT INTO shopping_cart(item_no, user_id, product_code, number_of_products)
+    VALUES(shopping_cart_seq.NEXTVAL, 'joonYeop', 'P00001', '5');
+
+INSERT INTO shopping_cart(item_no, user_id, product_code, number_of_products)
+    VALUES(shopping_cart_seq.NEXTVAL, 'hmson7', 'P00003', '2');
+
+INSERT INTO shopping_cart(item_no, user_id, product_code, number_of_products)
+    VALUES(shopping_cart_seq.NEXTVAL, 'hmson7', 'P00007', '1');
+
+INSERT INTO shopping_cart(item_no, user_id, product_code, number_of_products)
+    VALUES(shopping_cart_seq.NEXTVAL, 'jiae0521', 'P00009', '1');
+
+INSERT INTO shopping_cart(item_no, user_id, product_code, number_of_products)
+    VALUES(shopping_cart_seq.NEXTVAL, 'miju0923', 'P00012', '2');
+
+INSERT INTO shopping_cart(item_no, user_id, product_code, number_of_products)
+    VALUES(shopping_cart_seq.NEXTVAL, 'miju0923', 'P00011', '2');
+
+INSERT INTO shopping_cart(item_no, user_id, product_code, number_of_products)
+    VALUES(shopping_cart_seq.NEXTVAL, 'miju0923', 'P00005', '1');
+
+-- ***************************** 주문 정보 DML *********************************
+-- 주문 정보 추가
+INSERT INTO order_info(order_id, user_id, order_date, recipient_name, phone_number,
+                        postal_code, address, detailed_address, shipping_memo, 
+                        total_price, used_mileage, discounted_price, 
+                        payment_method, payment_id, accrued_mileage, order_status, total_shipping_cost)
+    VALUES ('20210923001', 'joonYeop', SYSDATE, '심준엽', '01092284907',
+            '01695', '서울특별시 노원구 상계동 617', '화랑빌딩 4층 401호', '문앞에 두고 가세요.',
+            '298000', '10000', '288000', 
+            '1', '', '14400', '02', '20000');
+
+INSERT INTO order_info(order_id, user_id, order_date, recipient_name, phone_number,
+                        postal_code, address, detailed_address, shipping_memo, 
+                        total_price, used_mileage, discounted_price, 
+                        payment_method, payment_id, accrued_mileage, order_status, total_shipping_cost)
+    VALUES ('20210923002', 'jiae0521', SYSDATE, '유지애', '01085442756',
+            '01645', '서울특별시 노원구 하계동 521', '주공아파트 1101호', '부재시 경비실에 맡겨주세요~',
+            '238000', '5000', '233000', 
+            '1', '', '11650', '02', '15000');
+
+INSERT INTO order_info(order_id, user_id, order_date, recipient_name, phone_number,
+                        postal_code, address, detailed_address, shipping_memo, 
+                        total_price, used_mileage, discounted_price,
+                        payment_method, payment_id, accrued_mileage, order_status, total_shipping_cost)
+    VALUES ('20210925001', 'jiae0521', SYSDATE, '유지애', '01085442756',
+            '01645', '서울특별시 노원구 하계동 521', '주공아파트 1101호', '부재시 경비실에 맡겨주세요~',
+            '71000', '0', '71000',
+            '3', '', '3550', '01', '3000');
+
+INSERT INTO order_info(order_id, user_id, order_date, recipient_name, phone_number,
+                        postal_code, address, detailed_address, shipping_memo, 
+                        total_price, used_mileage, discounted_price,
+                        payment_method, payment_id, accrued_mileage, order_status, total_shipping_cost)
+    VALUES ('20210925002', 'queenyuna', SYSDATE, '김연아', '01077094653',
+            '01322', '경기도 군포시 수리산로 48', '6-7 401호', '',
+            '84000', '4000', '80000',
+            '1', '', '4000', '02', '6000');
+
+INSERT INTO order_info(order_id, user_id, order_date, recipient_name, phone_number,
+                        postal_code, address, detailed_address, shipping_memo, 
+                        total_price, used_mileage, discounted_price,
+                        payment_method, payment_id, accrued_mileage, order_status, total_shipping_cost)
+    VALUES ('20210925003', 'hatihatiho', SYSDATE, '서지수', '01022310211',
+            '06552', '인천광역시 계양구 장제로 966', '403호', '안전하게 와주세요 ㅎㅎㅎ',
+            '87500', '500', '87000',
+            '1', '', '4350', '02', '8000');
+
+INSERT INTO order_info(order_id, user_id, order_date, recipient_name, phone_number,
+                        postal_code, address, detailed_address, shipping_memo, 
+                        total_price, used_mileage, discounted_price, 
+                        payment_method, payment_id, accrued_mileage, order_status, total_shipping_cost)
+    VALUES ('20210925004', 'gildong2', SYSDATE, '홍길동', '01099875756',
+            '01690', '서울특별시 노원구 중계동 17', '301호', '',
+            '287000', '23000', '264000', 
+            '1', '', '13200', '02', '13000');
+
+INSERT INTO order_info(order_id, user_id, order_date, recipient_name, phone_number,
+                        postal_code, address, detailed_address, shipping_memo, 
+                        total_price, used_mileage, discounted_price,
+                        payment_method, payment_id, accrued_mileage, order_status, total_shipping_cost)
+    VALUES ('20210926001', 'ironking11', SYSDATE, '조철왕', '01074541975',
+            '01616', '서울특별시 강북구 미아동 241', '현대아파트 3단지 106호', '배송 전에 문자주세요',
+            '20000', '0', '20000', 
+            '3', '', '1000', '01', '3000');
+
+-- ***************************** 주문 상품 DML *********************************
+-- 주문 상품 품목 추가
+INSERT INTO order_product_info(item_no, order_id, product_code, 
+                                product_name, parent_category, child_category, manufacturer, 
+                                product_price, number_of_orders, shipping_cost)
+    VALUES(order_product_info_seq.NEXTVAL, '20210923001', 'P00001', 
+            '가죽쇼파', '거실', '쇼파', '내일공방',
+            '139000', '2', '20000');
+
+INSERT INTO order_product_info(item_no, order_id, product_code, 
+                                product_name, parent_category, child_category, manufacturer, 
+                                product_price, number_of_orders, shipping_cost)
+    VALUES(order_product_info_seq.NEXTVAL, '20210923002', 'P00003', 
+            '4인 원목 식탁', '주방', '테이블', '동서가구',
+            '99000', '1', '3000');
+
+INSERT INTO order_product_info(item_no, order_id, product_code, 
+                                product_name, parent_category, child_category, manufacturer, 
+                                product_price, number_of_orders, shipping_cost)
+    VALUES(order_product_info_seq.NEXTVAL, '20210923002', 'P00004', 
+            '원목 식탁 의자', '주방', '의자', '동서가구',
+            '31000', '4', '12000');
+
+INSERT INTO order_product_info(item_no, order_id, product_code, 
+                                product_name, parent_category, child_category, manufacturer, 
+                                product_price, number_of_orders, shipping_cost)
+    VALUES(order_product_info_seq.NEXTVAL, '20210925001', 'P00008', 
+            '심플릭 화장대', '침실', '화장대', '내일공방',
+            '68000', '1', '3000');
+
+INSERT INTO order_product_info(item_no, order_id, product_code, 
+                                product_name, parent_category, child_category, manufacturer, 
+                                product_price, number_of_orders, shipping_cost)
+    VALUES(order_product_info_seq.NEXTVAL, '20210925002', 'P00011', 
+            'Pink Sands 향초', '인테리어', '미분류', 'Yankeecandle',
+            '78000', '2', '6000');
+
+INSERT INTO order_product_info(item_no, order_id, product_code, 
+                                product_name, parent_category, child_category, manufacturer, 
+                                product_price, number_of_orders, shipping_cost)
+    VALUES(order_product_info_seq.NEXTVAL, '20210925003', 'P00009', 
+            '메탈릭 프레임 책상', '서재', '책상', '이케아',
+            '48500', '1', '5000');
+
+INSERT INTO order_product_info(item_no, order_id, product_code, 
+                                product_name, parent_category, child_category, manufacturer, 
+                                product_price, number_of_orders, shipping_cost)
+    VALUES(order_product_info_seq.NEXTVAL, '20210925003', 'P00004', 
+            '원목 식탁 의자', '주방', '의자', '동서가구',
+            '31000', '1', '3000');
+
+INSERT INTO order_product_info(item_no, order_id, product_code, 
+                                product_name, parent_category, child_category, manufacturer, 
+                                product_price, number_of_orders, shipping_cost)
+    VALUES(order_product_info_seq.NEXTVAL, '20210925004', 'P00006', 
+            '원목 프레임 침대', '침실', '침대', '에이스',
+            '239000', '1', '10000');
+
+INSERT INTO order_product_info(item_no, order_id, product_code, 
+                                product_name, parent_category, child_category, manufacturer, 
+                                product_price, number_of_orders, shipping_cost)
+    VALUES(order_product_info_seq.NEXTVAL, '20210925004', 'P00007', 
+            '미니 테이블', '침실', '수납장', '동서가구',
+            '35000', '1', '3000');
+
+INSERT INTO order_product_info(item_no, order_id, product_code, 
+                                product_name, parent_category, child_category, manufacturer, 
+                                product_price, number_of_orders, shipping_cost)
+    VALUES(order_product_info_seq.NEXTVAL, '20210926001', 'P00012', 
+            'Black Cherry 디퓨저', '인테리어', '미분류', 'cocodor',
+            '20000', '1', '3000');
+
+-- ***************************** 회원 상품 리뷰 DML *****************************
+-- 회원 상품 리뷰 추가
+-- 상품 번호 1번에 대한 회원의 리뷰 추가
+INSERT INTO member_review(post_no, product_code, user_id, 
+                            review_score, post_date, post_content)
+    VALUES(member_review_seq.NEXTVAL, 'P00001', 'joonYeop', 
+            '5.0', DEFAULT, '대충 상품이 매우 좋다는 리뷰내용');
+        
+INSERT INTO member_review(post_no, product_code, user_id, 
+                            review_score, post_date, post_content)
+    VALUES(member_review_seq.NEXTVAL, 'P00002', 'gildong2', 
+            '4.5', DEFAULT, '대충 상품이 만족스럽다는 리뷰내용');
+
+INSERT INTO member_review(post_no, product_code, user_id, 
+                            review_score, post_date, post_content)
+    VALUES(member_review_seq.NEXTVAL, 'P00002', 'jiae0521', 
+            '4.0', DEFAULT, '이뻐요!');
+    
+INSERT INTO member_review(post_no, product_code, user_id, 
+                            review_score, post_date, post_content)
+    VALUES(member_review_seq.NEXTVAL, 'P00002', 'queenyuna', 
+        '5.0', DEFAULT, '맘에 쏙듬 ㅎㅎ');
+
+INSERT INTO member_review(post_no, product_code, user_id, 
+                            review_score, post_date, post_content)
+    VALUES(member_review_seq.NEXTVAL, 'P00006', 'jiae0521', 
+            '5.0', DEFAULT, '매트릭스가 완전 폭신폭신해서 매일 꿀잠자요 ㅎㅎㅎ');
+
+INSERT INTO member_review(post_no, product_code, user_id, 
+                            review_score, post_date, post_content)
+    VALUES(member_review_seq.NEXTVAL, 'P00006', 'jiyeoni', 
+            '3.0', DEFAULT, '사이즈가 하나밖에 없어서 아쉽네요');
+            
+INSERT INTO member_review(post_no, product_code, user_id, 
+                            review_score, post_date, post_content)
+    VALUES(member_review_seq.NEXTVAL, 'P00006', 'hmson7', 
+            '5.0', DEFAULT, '운동 끝나고 누우면 바로 기절합니다');
+            
+INSERT INTO member_review(post_no, product_code, user_id, 
+                            review_score, post_date, post_content)
+    VALUES(member_review_seq.NEXTVAL, 'P00006', 'ironking11', 
+            '4.0', DEFAULT, '아이방에 놔줬는데 만족하네요. 배송은 조금 늦었습니다');
+            
+INSERT INTO member_review(post_no, product_code, user_id, 
+                            review_score, post_date, post_content)
+    VALUES(member_review_seq.NEXTVAL, 'P00006', 'hatihatiho', 
+            '4.5', DEFAULT, '프레임이 나무라서 고급스럽고 너무 좋아요 ㅠㅠㅠ');
+            
+INSERT INTO member_review(post_no, product_code, user_id, 
+                            review_score, post_date, post_content)
+    VALUES(member_review_seq.NEXTVAL, 'P00006', 'flowerdeer', 
+            '3.0', DEFAULT, '프레임에 금이 조금 가있어서 교환받았네요');
+
+-- ***************************** 공지사항 글 DML *******************************
+INSERT INTO notice(post_no, user_id, post_title, post_content)
+    VALUES(notice_seq.NEXTVAL, 'admin001', '공지사항 제목', '공지사항 내용');
+    
+INSERT INTO notice(post_no, user_id, post_title, post_content)
+    VALUES(notice_seq.NEXTVAL, 'admin001', '공지사항 제목2', '공지사항 내용2');
+
+INSERT INTO notice(post_no, user_id, post_title, post_content)
+    VALUES(notice_seq.NEXTVAL, 'admin001', '공지사항 제목3', '공지사항 내용3');
+
+INSERT INTO notice(post_no, user_id, post_title, post_content)
+    VALUES(notice_seq.NEXTVAL, 'admin001', '공지사항 제목4', '공지사항 내용4');
+
+INSERT INTO notice(post_no, user_id, post_title, post_content)
+    VALUES(notice_seq.NEXTVAL, 'admin001', '공지사항 제목5', '공지사항 내용5');
+
+INSERT INTO notice(post_no, user_id, post_title, post_content)
+    VALUES(notice_seq.NEXTVAL, 'admin001', '공지사항 제목6', '공지사항 내용6');
+
+INSERT INTO notice(post_no, user_id, post_title, post_content)
+    VALUES(notice_seq.NEXTVAL, 'admin001', '공지사항 제목7', '공지사항 내용7');
+
+INSERT INTO notice(post_no, user_id, post_title, post_content)
+    VALUES(notice_seq.NEXTVAL, 'admin001', '공지사항 제목8', '공지사항 내용8');
+
+INSERT INTO notice(post_no, user_id, post_title, post_content)
+    VALUES(notice_seq.NEXTVAL, 'admin001', '공지사항 제목9', '공지사항 내용9');
+
+INSERT INTO notice(post_no, user_id, post_title, post_content)
+    VALUES(notice_seq.NEXTVAL, 'admin001', '공지사항 제목10', '공지사항 내용10');
+
+INSERT INTO notice(post_no, user_id, post_title, post_content)
+    VALUES(notice_seq.NEXTVAL, 'admin001', '공지사항 제목11', '공지사항 내용11');
+
+INSERT INTO notice(post_no, user_id, post_title, post_content)
+    VALUES(notice_seq.NEXTVAL, 'admin001', '공지사항 제목12', '공지사항 내용12');
+
+INSERT INTO notice(post_no, user_id, post_title, post_content)
+    VALUES(notice_seq.NEXTVAL, 'admin001', '이벤트 제목', '이벤트 내용');
+    
+INSERT INTO notice(post_no, user_id, post_title, post_content)
+    VALUES(notice_seq.NEXTVAL, 'admin001', '이벤트 제목2', '이벤트 내용2');
+
+INSERT INTO notice(post_no, user_id, post_title, post_content)
+    VALUES(notice_seq.NEXTVAL, 'admin001', '이벤트 제목3', '이벤트 내용3');
+
+-- ***************************** 이미지 정보 DML *******************************
+-- 상품 이미지 정보 추가
+-- 상품 이미지 추가
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00001', 'product_livingroom_sofa1.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00001', 'product_livingroom_sofa2.jpg');
+    select * from product_image_info;
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00002', 'product_living_table1.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00002', 'product_living_table2.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00003', 'product_kitchen_table1.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00003', 'product_kitchen_table2.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00004', 'product_kitchen_chair1.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00004', 'product_kitchen_chair2.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00005', 'product_kitchen_drawer1.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00005', 'product_kitchen_drawer2.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00006', 'product_bed_bed1.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00006', 'product_bed_bed2.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00007', 'product_bed_table1.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00007', 'product_bed_table2.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00008', 'product_bed_makeuptable1.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00008', 'product_bed_makeuptable2.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00009', 'product_library_desk1.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00009', 'product_library_desk2.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00010', 'product_library_bookshelf1.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00010', 'product_library_bookshelf2.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00011', 'product_interior_pinksands1.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00011', 'product_interior_pinksands2.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00012', 'product_interior_blackcherry1.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00012', 'product_interior_blackcherry2.jpg');
+
+-- section2
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00013', 'product_livingroom_sofa21.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00013', 'product_livingroom_sofa22.jpg');
+    select * from product_image_info;
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00014', 'product_living_table21.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00014', 'product_living_table22.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00015', 'product_kitchen_table21.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00015', 'product_kitchen_table22.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00016', 'product_kitchen_chair21.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00016', 'product_kitchen_chair22.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00017', 'product_kitchen_drawer21.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00017', 'product_kitchen_drawer22.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00018', 'product_bed_bed21.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00018', 'product_bed_bed22.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00019', 'product_bed_table21.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00019', 'product_bed_table22.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00020', 'product_bed_makeuptable21.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00020', 'product_bed_makeuptable22.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00021', 'product_library_desk21.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00021', 'product_library_desk22.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00022', 'product_library_bookshelf21.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00022', 'product_library_bookshelf22.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00023', 'product_interior_mirror1.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00023', 'product_interior_mirror2.jpg');
+
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00024', 'product_interior_rug1.jpg');
+INSERT INTO product_image_info(image_no, product_code, image_file_name)
+    VALUES(product_image_info_seq.NEXTVAL, 'P00024', 'product_interior_rug2.jpg');
+
+-- 회원 리뷰 이미지 추가
+INSERT INTO review_image_info(image_no, post_no, image_file_name)
+    VALUES(review_image_info_seq.NEXTVAL, '1', 'review_sofa_1.jpg');
+    
+INSERT INTO review_image_info(image_no, post_no, image_file_name)
+    VALUES(review_image_info_seq.NEXTVAL, '1', 'review_sofa_2.jpg');
+    
+INSERT INTO review_image_info(image_no, post_no, image_file_name)
+    VALUES(review_image_info_seq.NEXTVAL, '2', 'review_sofa_3.jpg');
+    
+INSERT INTO review_image_info(image_no, post_no, image_file_name)
+    VALUES(review_image_info_seq.NEXTVAL, '2', 'review_sofa_4.jpg');
+
+-- ***************************** 상품 문의 글 DML *******************************
+-- 상품 문의 글 추가
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00001', 'joonYeop',
+        '가죽 재질이 뭐에요?', 'Y');
+
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00001', 'joonYeop',
+        '기사님이 설치도 해주시나요?', 'N');
+
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00001', 'joonYeop',
+        '가로 길이가 어떻게 되나요?', 'N');
+
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00003', 'joonYeop',
+        '식탁 유리는 따로 판매 안하시나요?', 'Y');
+
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00008', 'joonYeop',
+        '유리가 잘 고정되어있나요? 만약 파손되면 수리는 어떻게 해요?', 'N');
+
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00009', 'joonYeop',
+        '직접 조립해야하는 제품인가요?', 'Y');
+
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00009', 'joonYeop',
+        '지탱하는 하중이 얼마나 될까요?', 'N');
+
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00005', 'joonYeop',
+        '설치가 간편하나요?', 'N');
+
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00006', 'joonYeop',
+        '설치가 간편하나요?', 'N');
+
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00006', 'joonYeop',
+        '설치가 간편하나요?', 'N');
+
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00006', 'joonYeop',
+        '설치가 간편하나요?', 'Y');
+
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00006', 'jiae0521',
+        '설치가 간편하나요?', 'N');
+
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00006', 'jiae0521',
+        '설치가 간편하나요?', 'Y');
+
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00006', 'jiae0521',
+        '설치가 간편하나요?', 'N');
+
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00006', 'queenyuna',
+        '설치가 간편하나요?', 'N');
+
+INSERT INTO product_inquiry(inquiry_no, product_code, user_id, 
+        inquiry_content, private_flag)
+    VALUES(product_inquiry_seq.NEXTVAL, 'P00006', 'gildong2',
+        '설치가 간편하나요?', 'N');
+
+-- ***************************** 1:1 문의 글 DML *******************************
+-- 1:1 문의 글 추가
+INSERT INTO one2one_inquiry(inquiry_no, user_id, inquiry_title, inquiry_content)
+    VALUES(one2one_inquiry_seq.NEXTVAL, 'joonYeop', '문의 제목', '문의 내용');
+
+INSERT INTO one2one_inquiry(inquiry_no, user_id, inquiry_title, inquiry_content)
+    VALUES(one2one_inquiry_seq.NEXTVAL, 'joonYeop', '문의 제목2', '문의 내용2');
+
+INSERT INTO one2one_inquiry(inquiry_no, user_id, inquiry_title, inquiry_content)
+    VALUES(one2one_inquiry_seq.NEXTVAL, 'joonYeop', '문의 제목3', '문의 내용3');
+
+INSERT INTO one2one_inquiry(inquiry_no, user_id, inquiry_title, inquiry_content)
+    VALUES(one2one_inquiry_seq.NEXTVAL, 'jiae0521', '문의 제목4', '문의 내용4');
+
+INSERT INTO one2one_inquiry(inquiry_no, user_id, inquiry_title, inquiry_content)
+    VALUES(one2one_inquiry_seq.NEXTVAL, 'hatihatiho', '문의 제목5', '문의 내용5');
+
+INSERT INTO one2one_inquiry(inquiry_no, user_id, inquiry_title, inquiry_content)
+    VALUES(one2one_inquiry_seq.NEXTVAL, 'queenyuna', '문의 제목6', '문의 내용6');
+
+INSERT INTO one2one_inquiry(inquiry_no, user_id, inquiry_title, inquiry_content)
+    VALUES(one2one_inquiry_seq.NEXTVAL, 'ironking11', '문의 제목7', '문의 내용7');
+
+INSERT INTO one2one_inquiry(inquiry_no, user_id, inquiry_title, inquiry_content)
+    VALUES(one2one_inquiry_seq.NEXTVAL, 'bigcristal', '문의 제목8', '문의 내용8');
+
+INSERT INTO one2one_inquiry(inquiry_no, user_id, inquiry_title, inquiry_content)
+    VALUES(one2one_inquiry_seq.NEXTVAL, 'bigcristal', '문의 제목9', '문의 내용9');
+
+INSERT INTO one2one_inquiry(inquiry_no, user_id, inquiry_title, inquiry_content)
+    VALUES(one2one_inquiry_seq.NEXTVAL, 'hmson7', '문의 제목10', '문의 내용10');
+
+INSERT INTO one2one_inquiry(inquiry_no, user_id, inquiry_title, inquiry_content)
+    VALUES(one2one_inquiry_seq.NEXTVAL, 'bigcristal', '문의 제목11', '문의 내용11');
+    
+INSERT INTO one2one_inquiry(inquiry_no, user_id, inquiry_title, inquiry_content)
+    VALUES(one2one_inquiry_seq.NEXTVAL, 'flowerdeer', '문의 제목12', '문의 내용12');
+    
+INSERT INTO one2one_inquiry(inquiry_no, user_id, inquiry_title, inquiry_content)
+    VALUES(one2one_inquiry_seq.NEXTVAL, 'hatihatiho', '문의 제목13', '문의 내용13');
+
+-- ***************************** 상품 문의 답변 글 DML **************************
+-- 상품 문의 답글 추가
+INSERT INTO product_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(product_inquiry_reply_seq.NEXTVAL, '1', 'admin001', '답변 내용');
+
+INSERT INTO product_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(product_inquiry_reply_seq.NEXTVAL, '2', 'admin001', '답변 내용2');
+
+INSERT INTO product_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(product_inquiry_reply_seq.NEXTVAL, '3', 'admin001', '답변 내용3');
+
+INSERT INTO product_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(product_inquiry_reply_seq.NEXTVAL, '4', 'admin001', '답변 내용4');
+
+INSERT INTO product_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(product_inquiry_reply_seq.NEXTVAL, '5', 'admin001', '답변 내용5');
+
+INSERT INTO product_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(product_inquiry_reply_seq.NEXTVAL, '6', 'admin001', '답변 내용6');
+
+INSERT INTO product_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(product_inquiry_reply_seq.NEXTVAL, '7', 'admin001', '답변 내용7');
+
+-- ***************************** 1:1 문의 답변 글 DML ***************************
+-- 1:1 문의 답글 추가
+INSERT INTO one2one_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(one2one_inquiry_reply_seq.NEXTVAL, '1', 'admin001', '답변 내용');
+
+INSERT INTO one2one_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(one2one_inquiry_reply_seq.NEXTVAL, '1', 'admin001', '답변 내용2');
+
+INSERT INTO one2one_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(one2one_inquiry_reply_seq.NEXTVAL, '1', 'admin001', '답변 내용3');
+
+INSERT INTO one2one_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(one2one_inquiry_reply_seq.NEXTVAL, '1', 'admin001', '답변 내용4');
+
+INSERT INTO one2one_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(one2one_inquiry_reply_seq.NEXTVAL, '1', 'admin001', '답변 내용5');
+
+INSERT INTO one2one_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(one2one_inquiry_reply_seq.NEXTVAL, '1', 'admin001', '답변 내용6');
+
+INSERT INTO one2one_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(one2one_inquiry_reply_seq.NEXTVAL, '1', 'admin001', '답변 내용7');
+
+INSERT INTO one2one_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(one2one_inquiry_reply_seq.NEXTVAL, '1', 'admin001', '답변 내용8');
+
+INSERT INTO one2one_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(one2one_inquiry_reply_seq.NEXTVAL, '1', 'admin001', '답변 내용9');
+
+INSERT INTO one2one_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(one2one_inquiry_reply_seq.NEXTVAL, '1', 'admin001', '답변 내용10');
+
+INSERT INTO one2one_inquiry_reply(reply_no, inquiry_no, user_id, reply_content)
+    VALUES(one2one_inquiry_reply_seq.NEXTVAL, '1', 'admin001', '답변 내용11');
+
+-- ***************************** 상품 판매 수 UPDATE ***************************
+UPDATE product_info SET NUMBER_OF_SALES = 10 WHERE PRODUCT_CODE = 'P00006';
+UPDATE product_info SET NUMBER_OF_SALES = 8 WHERE PRODUCT_CODE = 'P00012';
+UPDATE product_info SET NUMBER_OF_SALES = 6 WHERE PRODUCT_CODE = 'P00011';
+UPDATE product_info SET NUMBER_OF_SALES = 4 WHERE PRODUCT_CODE = 'P00005';
+UPDATE product_info SET NUMBER_OF_SALES = 3 WHERE PRODUCT_CODE = 'P00002';
+UPDATE product_info SET NUMBER_OF_SALES = 1 WHERE PRODUCT_CODE = 'P00001';
+UPDATE product_info SET NUMBER_OF_SALES = 2 WHERE PRODUCT_CODE = 'P00004';
+
+-- ***************************** 상품문의 답글 수 UPDATE ***************************
+UPDATE product_inquiry SET number_of_replies = 1 WHERE inquiry_no = 1;
+UPDATE product_inquiry SET number_of_replies = 1 WHERE inquiry_no = 2;
+UPDATE product_inquiry SET number_of_replies = 1 WHERE inquiry_no = 3;
+UPDATE product_inquiry SET number_of_replies = 1 WHERE inquiry_no = 4;
+UPDATE product_inquiry SET number_of_replies = 1 WHERE inquiry_no = 5;
+UPDATE product_inquiry SET number_of_replies = 1 WHERE inquiry_no = 6;
+UPDATE product_inquiry SET number_of_replies = 1 WHERE inquiry_no = 7;
+
+-- ***************************** 상품문의 답글 수 UPDATE ***************************
+UPDATE one2one_inquiry SET number_of_replies = 1 WHERE inquiry_no = 1;
+UPDATE one2one_inquiry SET number_of_replies = 1 WHERE inquiry_no = 2;
+UPDATE one2one_inquiry SET number_of_replies = 1 WHERE inquiry_no = 3;
+UPDATE one2one_inquiry SET number_of_replies = 1 WHERE inquiry_no = 4;
+UPDATE one2one_inquiry SET number_of_replies = 1 WHERE inquiry_no = 5;
+UPDATE one2one_inquiry SET number_of_replies = 1 WHERE inquiry_no = 6;
+UPDATE one2one_inquiry SET number_of_replies = 1 WHERE inquiry_no = 7;
+UPDATE one2one_inquiry SET number_of_replies = 1 WHERE inquiry_no = 8;
+UPDATE one2one_inquiry SET number_of_replies = 1 WHERE inquiry_no = 9;
+UPDATE one2one_inquiry SET number_of_replies = 1 WHERE inquiry_no = 10;
+UPDATE one2one_inquiry SET number_of_replies = 1 WHERE inquiry_no = 11;
+
+-- 공지사항 중요 플래그 변경
+UPDATE notice
+    SET important_flag = 'Y'
+    WHERE post_no = 1
+       OR post_no = 5
+       OR post_no = 15
+       OR post_no = 17;
+
+UPDATE member_info
+    SET mileage = '10000'
+    WHERE user_id = 'jiae0521'
+       OR user_id = 'joonYeop'
+       OR user_id = 'gildong2';
+       
+UPDATE member_info
+    SET mileage = '5000'
+    WHERE user_id = 'flowerdeer'
+       OR user_id = 'queenyuna'
+       OR user_id = 'hmson7';
+       
+
+COMMIT;

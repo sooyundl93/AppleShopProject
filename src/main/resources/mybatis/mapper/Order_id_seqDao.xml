@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 주문 번호 시퀀스 xml -->
+
+<mapper namespace="com.study.springboot.dao.IOrder_id_seqDao"> 
+	
+	<!--*******************-->
+	<!--* 작업자 : 김남권 *-->
+	<!--*******************-->
+	
+	<!-- 주문번호 시퀀스 조회 -->
+	<select id="get_order_seq" resultType="com.study.springboot.dto.Order_id_seqDto"> 
+		SELECT TO_CHAR(LPAD(COUNT(*) + 1, 3, '0')) AS "order_id_seq" 
+    		FROM ORDER_INFO 
+    		WHERE TO_CHAR(ORDER_DATE, 'YYYYMMDD') = #{today}
+	</select>
+
+</mapper>
