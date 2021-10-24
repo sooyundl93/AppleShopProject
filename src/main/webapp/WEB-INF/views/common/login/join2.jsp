@@ -87,8 +87,8 @@
 		<div class="tr radio">
 			<div class="th">성별</div>			
 			<div class="td">
-				<input type="radio" name="gender" id="gender1" value="남" onclick="genderCheck();" /><label for="gender">남자</label>
-				<input type="radio" name="gender" id="gender2" value="여" onclick="genderCheck();" /><label for="gender">여자</label>
+				<input type="radio" name="gender" id="gender1" value="남" onclick="genderCheck();" /><label for="gender">남</label>
+				<input type="radio" name="gender" id="gender2" value="여" onclick="genderCheck();" /><label for="gender">여</label>
                 <input type="hidden" id="gender_check" value="0">
                 <div id="genderCheckMessage"></div>  
 			</div>
